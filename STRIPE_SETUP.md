@@ -50,3 +50,11 @@ Stripe says India-based Stripe accounts and Connect are invite-only. Stripe's In
 - Either party can request cancellation. Paid orders are cancelled only after both buyer and seller approve; the backend then requests a refund against the original Stripe Checkout payment. Unpaid pending orders can be cancelled without a refund.
 - AI moderation is a safety filter, not a dispute judge. AI does not decide who gets refunded or release money automatically from a chat classification. Use the order dispute/support flow for contested cases.
 - Stripe Checkout is the only enabled order checkout route. Legacy Razorpay, direct UPI checkout, and manual wallet-credit refund endpoints are disabled.
+
+
+## Marketplace discovery assistant
+
+- Set `NVIDIA_API_KEY` as a backend-only secret.
+- `NVIDIA_ASSISTANT_MODEL` defaults to `nvidia/nemotron-3.5-lightning-30b-a3b`; the assistant calls NVIDIA's OpenAI-compatible Chat Completions endpoint server-side and returns live gig matches from the database.
+- The floating assistant is available across the frontend. It can ask about style, anime/game, budget, and deadline, and links only to real active listings returned by the backend.
+- The assistant uses a non-streaming server request for reliable JSON responses to the web client. The API key is never sent to the browser.
