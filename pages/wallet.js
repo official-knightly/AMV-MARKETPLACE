@@ -16,7 +16,7 @@ import api, { startStripeSellerOnboarding, getStripeSellerStatus } from '../lib/
 
 export default function Wallet() {
   const router = useRouter();
-  const { user } = useAuthStore();
+  const { user, authReady } = useAuthStore();
   const [loading, setLoading] = useState(true);
   const [walletData, setWalletData] = useState(null);
   const [transactions, setTransactions] = useState([]);
@@ -35,6 +35,7 @@ export default function Wallet() {
   const [stripeStatus, setStripeStatus] = useState(null);
 
   useEffect(() => {
+    if (!authReady) return;
     if (!user) {
       router.push('/login');
       return;
@@ -47,7 +48,7 @@ export default function Wallet() {
     }
 
     loadWalletData();
-  }, [user]);
+  }, [authReady, user]);
 
   const loadWalletData = async () => {
     try {
