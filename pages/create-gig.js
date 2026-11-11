@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { useAuthStore } from '../lib/store';
 import { Upload, Video, Image as ImageIcon, Loader2, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
@@ -7,7 +7,7 @@ import api from '../lib/api';
 
 export default function CreateGig() {
   const router = useRouter();
-  const { user } = useAuthStore();
+  const { user, authReady } = useAuthStore();
   const [step, setStep] = useState(1); // 1: Upload, 2: Details, 3: AI Check, 4: Publish
   
   // Step 1: Video Upload
@@ -36,10 +36,11 @@ export default function CreateGig() {
   // Step 4: Publishing
   const [publishing, setPublishing] = useState(false);
 
-  if (!user) {
-    if (typeof window !== 'undefined') router.push('/login');
-    return null;
-  }
+  useEffect(() => {
+    if (authReady && !user) router.replace('/login');
+  }, [authReady, user, router]);
+
+  if (!authReady || !user) return null;
 
   const handleVideoSelect = (e) => {
     const file = e.target.files[0];
