@@ -1,6 +1,5 @@
 import Head from 'next/head';
 import Link from 'next/link';
-import Navbar from '../../components/Navbar';
 import { ArrowRight } from 'lucide-react';
 
 const tools = [
@@ -13,7 +12,6 @@ export default function AITools() {
   return (
     <>
       <Head><title>AI Tools - VORTEX</title></Head>
-      <Navbar />
       <main className="pt-24 pb-16 px-6">
         <div className="max-w-4xl mx-auto">
           <h1 className="text-display text-5xl mb-4">AI TOOLS</h1>
