@@ -5,6 +5,9 @@ from flask_jwt_extended import JWTManager, create_access_token, jwt_required, ge
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timedelta
 import os
+
+from dotenv import load_dotenv
+load_dotenv()
 import json
 import hashlib
 import re
@@ -1795,34 +1798,6 @@ def update_user_profile():
 
 
 # ==================== CHAT SYSTEM ENDPOINTS ====================
-
-@app.route('/api/chat/messages/<int:order_id>', methods=['GET'])
-@jwt_required()
-def get_chat_messages(order_id):
-    """Get all messages for an order"""
-    user_id = get_jwt_identity()
-    order = Order.query.get_or_404(order_id)
-    
-    # Check if user is part of this order
-    if order.buyer_id != user_id and order.seller_id != user_id:
-        return jsonify({'error': 'Unauthorized'}), 403
-    
-    messages = Message.query.filter_by(order_id=order_id).order_by(Message.timestamp.asc()).all()
-    
-    return jsonify({
-        'messages': [{
-            'id': m.id,
-            'sender': {
-                'id': m.sender_id,
-                'username': User.query.get(m.sender_id).username,
-                'profile_image': User.query.get(m.sender_id).profile_image
-            },
-            'content': m.content,
-            'timestamp': m.timestamp.isoformat(),
-            'is_read': m.is_read,
-            'message_type': m.message_type
-        } for m in messages]
-    })
 
 @app.route('/api/chat/unread-count', methods=['GET'])
 @jwt_required()
