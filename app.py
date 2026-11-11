@@ -20,7 +20,6 @@ import io
 import base64
 from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
-import razorpay
 import stripe
 import threading
 import time
@@ -63,10 +62,6 @@ db = SQLAlchemy(app)
 jwt = JWTManager(app)
 
 # Payment Gateway Setup
-RAZORPAY_KEY_ID = os.environ.get('RAZORPAY_KEY_ID', '')
-RAZORPAY_KEY_SECRET = os.environ.get('RAZORPAY_KEY_SECRET', '')
-razorpay_client = razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET))
-
 STRIPE_SECRET_KEY = os.environ.get('STRIPE_SECRET_KEY', '')
 stripe.api_key = STRIPE_SECRET_KEY
 
@@ -132,7 +127,7 @@ class Order(db.Model):
     status = db.Column(db.String(20), default='pending')  # pending, in_progress, completed, cancelled, disputed
     escrow_status = db.Column(db.String(20), default='held')  # held, released, refunded
     payment_id = db.Column(db.String(200))
-    payment_method = db.Column(db.String(50))  # razorpay, stripe, upi
+    payment_method = db.Column(db.String(50))  # stripe
     delivery_file = db.Column(db.String(500))
     buyer_message = db.Column(db.Text)
     seller_message = db.Column(db.Text)
@@ -200,7 +195,7 @@ class ContentFingerprint(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 class PlatformFee(db.Model):
-    """Platform fee (10%) credited to PLATFORM_UPI_ID on escrow release"""
+    """Platform commission (5% by default) recorded when an order is released."""
     id = db.Column(db.Integer, primary_key=True)
     order_id = db.Column(db.Integer, db.ForeignKey('order.id'), nullable=False)
     amount = db.Column(db.Float, nullable=False)
@@ -985,56 +980,11 @@ def create_order():
 @jwt_required()
 def create_razorpay_payment():
     return jsonify({'error': 'Razorpay is disabled. Use Stripe Checkout for all marketplace payments.'}), 410
-    data = request.json
-    order = Order.query.get_or_404(data['order_id'])
-    
-    try:
-        if not RAZORPAY_KEY_ID or not RAZORPAY_KEY_SECRET:
-            return jsonify({'error': 'Razorpay is not configured on the server'}), 400
-        razorpay_order = razorpay_client.order.create({
-            'amount': int(order.amount * 100),  # Convert to paise
-            'currency': 'INR',
-            'payment_capture': 1
-        })
-        
-        return jsonify({
-            'razorpay_order_id': razorpay_order['id'],
-            'amount': order.amount,
-            'currency': 'INR',
-            'key_id': RAZORPAY_KEY_ID
-        })
-    except Exception as e:
-        return jsonify({'error': str(e)}), 400
 
 @app.route('/api/payment/razorpay/verify', methods=['POST'])
 @jwt_required()
 def verify_razorpay_payment():
     return jsonify({'error': 'Razorpay is disabled. Use Stripe Checkout for all marketplace payments.'}), 410
-    data = request.json
-    order = Order.query.get_or_404(data['order_id'])
-    
-    try:
-        if not RAZORPAY_KEY_ID or not RAZORPAY_KEY_SECRET:
-            return jsonify({'error': 'Razorpay is not configured on the server'}), 400
-        razorpay_client.utility.verify_payment_signature({
-            'razorpay_order_id': data['razorpay_order_id'],
-            'razorpay_payment_id': data['razorpay_payment_id'],
-            'razorpay_signature': data['razorpay_signature']
-        })
-        
-        order.payment_id = data['razorpay_payment_id']
-        order.payment_method = 'razorpay'
-        order.status = 'in_progress'
-        order.escrow_status = 'held'
-        
-        gig = Gig.query.get(order.gig_id)
-        gig.total_orders += 1
-        
-        db.session.commit()
-        
-        return jsonify({'message': 'Payment successful', 'order_id': order.id})
-    except Exception as e:
-        return jsonify({'error': 'Payment verification failed', 'details': str(e)}), 400
 
 @app.route('/api/payment/upi/create', methods=['POST'])
 @jwt_required()
@@ -1485,7 +1435,7 @@ def search():
 @app.route('/api/orders/<int:order_id>/request-ai-verify', methods=['POST'])
 @jwt_required()
 def request_ai_verify(order_id):
-    """Buyer requests immediate AI escrow verification (Claude + Codex + Cursor engines)."""
+    """Buyer requests immediate AI delivery verification using configured NVIDIA/Anthropic review and local checks."""
     user_id = get_jwt_identity()
     order = Order.query.get_or_404(order_id)
     if order.buyer_id != user_id and order.seller_id != user_id:
@@ -1999,7 +1949,7 @@ def get_wallet_balance():
         escrow_status='released'
     ).all()
     
-    total_earned = sum(o.amount * 0.85 for o in completed_orders)  # After 15% fee
+    total_earned = sum(o.amount * (1 - PLATFORM_FEE_RATE) for o in completed_orders)  # After 15% fee
     
     # Pending earnings (orders in progress)
     pending_orders = Order.query.filter_by(
