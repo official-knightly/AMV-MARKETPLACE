@@ -1290,9 +1290,11 @@ def dispute_escrow(order_id):
     order = Order.query.get_or_404(order_id)
     if order.buyer_id != user_id:
         return jsonify({'error': 'Unauthorized'}), 403
+    if order.status != 'in_progress' or order.payment_method != 'stripe' or not order.payment_id:
+        return jsonify({'error': 'A paid, active Stripe order is required to open a dispute.'}), 409
     if order.escrow_status != 'held':
         return jsonify({'error': 'Escrow not in held state'}), 400
-    data = request.json or {}
+    data = request.get_json(silent=True) or {}
     order.status = 'disputed'
     order.buyer_message = data.get('reason', order.buyer_message or 'Dispute opened')
     db.session.commit()
