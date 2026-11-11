@@ -9,12 +9,13 @@ import toast from 'react-hot-toast';
 export default function OrderChat() {
   const router = useRouter();
   const { orderId } = router.query;
-  const { user } = useAuthStore();
+  const { user, authReady } = useAuthStore();
   const [order, setOrder] = useState(null);
   const [otherUser, setOtherUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!authReady) return;
     if (!user) {
       router.push('/login');
       return;
@@ -23,7 +24,7 @@ export default function OrderChat() {
     if (orderId) {
       loadOrderDetails();
     }
-  }, [orderId, user]);
+  }, [authReady, orderId, user]);
 
   const loadOrderDetails = async () => {
     try {
