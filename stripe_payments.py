@@ -125,7 +125,7 @@ def register_stripe_routes(app, db, User, Order, Gig):
             event = stripe.Webhook.construct_event(payload, signature, STRIPE_WEBHOOK_SECRET)
         except (ValueError, stripe.error.SignatureVerificationError):
             return jsonify({"error": "Invalid Stripe webhook signature"}), 400
-        if event["type"] == "checkout.session.completed":
+        if event["type"] in ("checkout.session.completed", "checkout.session.async_payment_succeeded"):
             complete_checkout(event["data"]["object"])
         return jsonify({"received": True})
 
