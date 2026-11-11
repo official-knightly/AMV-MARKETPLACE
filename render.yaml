@@ -18,12 +18,12 @@ services:
         sync: false
       - key: GOOGLE_CLIENT_SECRET
         sync: false
-      - key: RAZORPAY_KEY_ID
-        sync: false
-      - key: RAZORPAY_KEY_SECRET
-        sync: false
       - key: STRIPE_SECRET_KEY
         sync: false
+      - key: NVIDIA_API_KEY
+        sync: false
+      - key: NVIDIA_MODEL
+        value: moonshotai/kimi-k3
       - key: STRIPE_WEBHOOK_SECRET
         sync: false
       - key: STRIPE_CONNECT_COUNTRY
@@ -47,8 +47,6 @@ services:
       - key: NEXT_PUBLIC_API_URL
         sync: false
       - key: NEXT_PUBLIC_GOOGLE_CLIENT_ID
-        sync: false
-      - key: NEXT_PUBLIC_RAZORPAY_KEY
         sync: false
       - key: NEXT_PUBLIC_DONATE_UPI
         sync: false
