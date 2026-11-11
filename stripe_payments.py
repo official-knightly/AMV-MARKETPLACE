@@ -186,38 +186,3 @@ def register_stripe_routes(app, db, User, Order, Gig):
             })
         except stripe.error.StripeError as exc:
             return jsonify({"error": str(exc.user_message or exc)}), 400
-
-    @app.route("/api/stripe/connect/withdraw", methods=["POST"])
-    @jwt_required()
-    def stripe_connect_withdraw():
-        unavailable = stripe_ready()
-        if unavailable:
-            return unavailable
-        user = User.query.get(get_jwt_identity())
-        if not user or not user.stripe_account_id:
-            return jsonify({"error": "Complete Stripe seller onboarding first"}), 400
-        data = request.get_json(silent=True) or {}
-        try:
-            amount = round(float(data.get("amount", 0)), 2)
-        except (TypeError, ValueError):
-            return jsonify({"error": "Enter a valid withdrawal amount"}), 400
-        if amount < 100:
-            return jsonify({"error": "Minimum Stripe withdrawal is ₹100"}), 400
-        if amount > float(user.balance or 0):
-            return jsonify({"error": "Insufficient wallet balance"}), 400
-        try:
-            account = stripe.Account.retrieve(user.stripe_account_id)
-            if not account.payouts_enabled:
-                return jsonify({"error": "Stripe verification is incomplete. Finish seller onboarding first."}), 409
-            transfer = stripe.Transfer.create(
-                amount=int(round(amount * 100)),
-                currency="inr",
-                destination=user.stripe_account_id,
-                metadata={"marketplace_user_id": str(user.id)},
-            )
-            user.balance = round(float(user.balance or 0) - amount, 2)
-            db.session.commit()
-            return jsonify({"message": "Funds transferred to your Stripe connected balance", "transfer_id": transfer.id})
-        except stripe.error.StripeError as exc:
-            db.session.rollback()
-            return jsonify({"error": str(exc.user_message or exc)}), 400
