@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
-import { getGig, createOrder, createStripeCheckoutSession } from '../../lib/api';
+import { getGig, createOrder, createStripeCheckoutSession, submitCopyrightReport } from '../../lib/api';
 import { useAuthStore } from '../../lib/store';
 import toast from 'react-hot-toast';
 import { Star, Shield, Clock, CheckCircle } from 'lucide-react';
@@ -19,6 +19,22 @@ export default function GigDetail() {
     if (!id) return;
     getGig(id).then((res) => setGig(res.data)).catch(() => toast.error('Gig not found'));
   }, [id]);
+
+  const handleCopyrightReport = async () => {
+    const claimant_name = window.prompt('Your full legal name or rights-holder name:');
+    if (!claimant_name) return;
+    const contact_email = window.prompt('Contact email for this report:');
+    if (!contact_email) return;
+    const description = window.prompt('Explain what copyrighted work is being used and why you believe this listing infringes it:');
+    if (!description) return;
+    const evidence_url = window.prompt('Evidence URL (optional):') || '';
+    try {
+      await submitCopyrightReport(id, { claimant_name, contact_email, description, evidence_url });
+      toast.success('Copyright report submitted for admin review.');
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Could not submit copyright report');
+    }
+  };
 
   const handleOrder = async () => {
     if (!isAuthenticated) {
@@ -124,6 +140,9 @@ export default function GigDetail() {
               <p className="text-xs text-white/40 mt-4 text-center">
                 Secure Stripe Checkout. Funds stay in marketplace escrow until you approve delivery.
               </p>
+              <button type="button" onClick={handleCopyrightReport} className="w-full mt-3 py-2 rounded-lg border border-white/10 text-xs text-white/50 hover:text-white hover:bg-white/5">
+                Report copyright infringement
+              </button>
             </div>
           </div>
         </div>
