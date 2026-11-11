@@ -716,7 +716,7 @@ def register_marketplace(app, db, jwt_required, get_jwt_identity, sanitize_text,
             q = q.filter_by(category=category)
         gigs = q.order_by(Gig.rating.desc(), Gig.total_orders.desc()).limit(12).all()
         return jsonify({
-            'powered_by': list(helpers.get('AI_ENGINES', ('claude', 'codex', 'cursor'))),
+            'powered_by': list(helpers.get('AI_ENGINES', ('nvidia_nim', 'local_rules', 'opencv_video'))),
             'recommendations': [{
                 'id': g.id, 'title': g.title, 'price': g.price,
                 'ai_score': g.ai_quality_score, 'rating': g.rating,
