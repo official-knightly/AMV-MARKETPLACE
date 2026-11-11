@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { ShoppingBag, Briefcase, ArrowRight } from 'lucide-react';
 import { useAuthStore } from '../lib/store';
@@ -7,11 +7,16 @@ import toast from 'react-hot-toast';
 
 export default function SelectRole() {
   const router = useRouter();
-  const { user, updateUser } = useAuthStore();
+  const { user, updateUser, authReady } = useAuthStore();
   const [selectedRole, setSelectedRole] = useState(null);
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    if (authReady && !user) router.replace('/login');
+  }, [authReady, user, router]);
+
   const handleRoleSelection = async () => {
+    if (!authReady || !user) return;
     if (!selectedRole) {
       toast.error('Please select a role');
       return;
@@ -69,6 +74,8 @@ export default function SelectRole() {
       gradient: 'from-green-600 to-teal-600',
     },
   ];
+
+  if (!authReady || !user) return null;
 
   return (
     <div className="min-h-screen bg-bg text-white flex items-center justify-center px-6 py-20">
