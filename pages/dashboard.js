@@ -28,7 +28,9 @@ export default function Dashboard() {
       return;
     }
     
-    setCurrentRole(user?.is_seller ? 'seller' : 'buyer');
+    const initialRole = user?.is_seller || user?.account_type === 'seller' ? 'seller' : 'buyer';
+    setCurrentRole(initialRole);
+    setActiveTab(initialRole);
     loadOrders();
   }, [authReady, isAuthenticated, activeTab]);
 
