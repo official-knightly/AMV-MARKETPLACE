@@ -24,6 +24,12 @@ services:
         sync: false
       - key: STRIPE_SECRET_KEY
         sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: STRIPE_CONNECT_COUNTRY
+        value: "IN"
+      - key: FRONTEND_URL
+        sync: false
       - key: PLATFORM_UPI_ID
         sync: false
       - key: PLATFORM_FEE_RATE
