@@ -8,17 +8,22 @@ import Navbar from '../components/Navbar';
 import MarketplaceAssistant from '../components/MarketplaceAssistant';
 
 function MyApp({ Component, pageProps }) {
-  const { setAuth } = useAuthStore();
+  const { setAuth, setAuthReady } = useAuthStore();
   const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
 
   useEffect(() => {
     const token = localStorage.getItem('token');
-    if (token) {
-      getCurrentUser()
-        .then(res => setAuth(res.data, token))
-        .catch(() => localStorage.removeItem('token'));
+    if (!token) {
+      setAuthReady(true);
+      return;
     }
-  }, []);
+    getCurrentUser()
+      .then((res) => setAuth(res.data, token))
+      .catch(() => {
+        localStorage.removeItem('token');
+      })
+      .finally(() => setAuthReady(true));
+  }, [setAuth, setAuthReady]);
 
   const appShell = (
     <>
