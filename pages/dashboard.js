@@ -49,7 +49,8 @@ export default function Dashboard() {
     try {
       const res = await api.post('/user/switch-role', { role: newRole });
       setCurrentRole(newRole);
-      updateUser({ is_seller: newRole === 'seller' });
+      setActiveTab(newRole);
+      updateUser({ is_seller: newRole === 'seller', account_type: newRole });
       toast.success(`Switched to ${newRole} mode!`);
     } catch (error) {
       toast.error('Failed to switch role');
