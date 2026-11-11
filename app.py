@@ -89,6 +89,8 @@ class User(db.Model):
     phone_number = db.Column(db.String(20), unique=True)
     phone_verified = db.Column(db.Boolean, default=False)
     account_type = db.Column(db.String(20), default='buyer')
+    stripe_account_id = db.Column(db.String(120), unique=True)
+    stripe_onboarding_complete = db.Column(db.Boolean, default=False)
     upi_id = db.Column(db.String(100))
     bank_account = db.Column(db.String(200))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -219,6 +221,10 @@ from marketplace_full import register_marketplace
 _mp_exports = register_marketplace(app, db, jwt_required, get_jwt_identity, sanitize_text, _mp_helpers)
 GigPackage = _mp_exports['GigPackage']
 
+# Stripe Checkout and Stripe Connect seller verification/payouts
+from stripe_payments import register_stripe_routes
+register_stripe_routes(app, db, User, Order, Gig)
+
 # ==================== HELPER FUNCTIONS ====================
 
 def _migrate_schema():
@@ -244,6 +250,8 @@ def _migrate_schema():
     user_new = {
         'phone_number': 'VARCHAR(20)', 'phone_verified': 'BOOLEAN DEFAULT 0',
         'account_type': "VARCHAR(20) DEFAULT 'buyer'",
+        'stripe_account_id': 'VARCHAR(120)',
+        'stripe_onboarding_complete': 'BOOLEAN DEFAULT 0',
     }
     for name, typ in order_new.items():
         if name not in cols_order:
@@ -288,8 +296,7 @@ def serialize_user(user):
         'trust_score': user.trust_score,
         'profile_image': user.profile_image,
         'upi_id': user.upi_id,
-        'phone_number': user.phone_number,
-        'phone_verified': bool(user.phone_verified),
+        'stripe_verified': bool(user.stripe_onboarding_complete),
         'account_type': user.account_type or ('seller' if user.is_seller else 'buyer'),
     }
 
