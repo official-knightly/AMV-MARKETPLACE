@@ -1320,7 +1320,8 @@ def dispute_escrow(order_id):
 @app.route('/api/escrow/<int:order_id>/refund', methods=['POST'])
 @jwt_required()
 def refund_escrow(order_id):
-    """Refund escrow to buyer (admin/seller agreement flow simplified)"""
+    """Legacy wallet-credit refund disabled; Stripe refunds must be created against the original payment."""
+    return jsonify({'error': 'Manual wallet refunds are disabled. Use the order cancellation flow so the original Stripe payment can be refunded.'}), 410
     user_id = get_jwt_identity()
     order = Order.query.get_or_404(order_id)
     if order.buyer_id != user_id and order.seller_id != user_id:
