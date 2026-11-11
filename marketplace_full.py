@@ -735,7 +735,7 @@ def register_marketplace(app, db, jwt_required, get_jwt_identity, sanitize_text,
                 'seller_pitches', 'inbox_messaging', 'notifications', 'favorites',
                 'coupons', 'seller_analytics', 'seller_levels', 'public_seller_profiles',
                 'ai_recommendations', 'fake_amv_removal', 'plagiarism_detection',
-                'razorpay_upi_payments', 'wallet_withdrawals', 'google_auth',
+                'stripe_checkout_payments', 'stripe_seller_onboarding', 'wallet_withdrawals', 'google_auth',
             ],
             'fiverr_parity': True,
         })
