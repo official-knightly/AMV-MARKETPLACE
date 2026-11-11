@@ -1843,7 +1843,7 @@ def deliver_order_with_ai_verification(order_id):
         
         # Release payment to seller (85% after platform fee)
         seller = User.query.get(order.seller_id)
-        seller.balance += order.amount * 0.85
+        seller.balance += order.amount * (1 - PLATFORM_FEE_RATE)
         
         # Send system message
         system_msg = Message(
@@ -1949,7 +1949,7 @@ def get_wallet_balance():
         escrow_status='released'
     ).all()
     
-    total_earned = sum(o.amount * (1 - PLATFORM_FEE_RATE) for o in completed_orders)  # After 15% fee
+    total_earned = sum(o.amount * (1 - PLATFORM_FEE_RATE) for o in completed_orders)  # After platform commission
     
     # Pending earnings (orders in progress)
     pending_orders = Order.query.filter_by(
@@ -1958,7 +1958,7 @@ def get_wallet_balance():
         escrow_status='held'
     ).all()
     
-    pending_earnings = sum(o.amount * 0.85 for o in pending_orders)
+    pending_earnings = sum(o.amount * (1 - PLATFORM_FEE_RATE) for o in pending_orders)
     
     # Withdrawn amount
     completed_withdrawals = Withdrawal.query.filter_by(
@@ -2006,7 +2006,7 @@ def get_wallet_transactions():
     earnings = [{
         'id': o.id,
         'type': 'earning',
-        'amount': o.amount * 0.85,
+        'amount': o.amount * (1 - PLATFORM_FEE_RATE),
         'gross_amount': o.amount,
         'platform_fee': round(o.amount * PLATFORM_FEE_RATE, 2),
         'description': f"Payment for: {Gig.query.get(o.gig_id).title}",
@@ -2060,7 +2060,7 @@ def get_earnings_stats():
         Order.completed_at >= month_start
     ).all()
     
-    month_earnings = sum(o.amount * 0.85 for o in month_orders)
+    month_earnings = sum(o.amount * (1 - PLATFORM_FEE_RATE) for o in month_orders)
     
     # Last 7 days
     week_start = datetime.utcnow() - timedelta(days=7)
@@ -2070,7 +2070,7 @@ def get_earnings_stats():
         Order.completed_at >= week_start
     ).all()
     
-    week_earnings = sum(o.amount * 0.85 for o in week_orders)
+    week_earnings = sum(o.amount * (1 - PLATFORM_FEE_RATE) for o in week_orders)
     
     # Average order value
     all_orders = Order.query.filter_by(
