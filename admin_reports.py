@@ -80,9 +80,48 @@ def register_admin_routes(app, db, User, Gig, Order, PlatformFee, platform_fee_r
                 "orders": Order.query.count(),
                 "disputes": Order.query.filter_by(status="disputed").count(),
                 "copyright_reports": CopyrightReport.query.filter(CopyrightReport.status.in_(["pending", "under_review"])).count(),
+                "moderation_queue": Gig.query.filter(Gig.flagged_fake.is_(True)).count(),
             },
             "admin": {"id": admin.id, "username": admin.username, "email": admin.email},
         })
+
+    @app.route("/api/admin/moderation", methods=["GET"])
+    @jwt_required()
+    def admin_list_moderation_queue():
+        if not admin_required_user():
+            return admin_error()
+        from sqlalchemy import or_
+        gigs = Gig.query.filter(
+            or_(Gig.flagged_fake.is_(True), Gig.ai_scan_notes.isnot(None))
+        ).order_by(Gig.created_at.desc()).limit(200).all()
+        return jsonify({"listings": [{
+            "id": gig.id, "title": gig.title, "description": (gig.description or "")[:1000],
+            "category": gig.category, "is_active": gig.is_active,
+            "flagged_fake": gig.flagged_fake, "ai_quality_score": gig.ai_quality_score,
+            "ai_scan_notes": gig.ai_scan_notes, "seller": gig.seller.username if gig.seller else "Unknown",
+        } for gig in gigs]})
+
+    @app.route("/api/admin/moderation/<int:gig_id>", methods=["PATCH"])
+    @jwt_required()
+    def admin_update_moderation(gig_id):
+        if not admin_required_user():
+            return admin_error()
+        gig = Gig.query.get_or_404(gig_id)
+        data = request.get_json(silent=True) or {}
+        action = (data.get("action") or "").strip().lower()
+        note = (data.get("note") or "").strip()[:2000]
+        if action == "approve":
+            gig.flagged_fake = False
+            gig.is_active = True
+            gig.ai_scan_notes = "Admin approved listing" + (": " + note if note else ".")
+        elif action == "remove":
+            gig.flagged_fake = True
+            gig.is_active = False
+            gig.ai_scan_notes = "Removed after admin moderation review" + (": " + note if note else ".")
+        else:
+            return jsonify({"error": "action must be 'approve' or 'remove'."}), 400
+        db.session.commit()
+        return jsonify({"message": "Moderation decision saved.", "gig_id": gig.id, "is_active": gig.is_active})
 
     @app.route("/api/admin/disputes", methods=["GET"])
     @jwt_required()
