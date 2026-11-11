@@ -116,7 +116,7 @@ export default function GigDetail() {
               <div className="space-y-2 text-sm text-white/60 mb-6">
                 <p className="flex items-center gap-2"><Clock className="w-4 h-4" /> {gig.delivery_days} day delivery</p>
                 <p className="flex items-center gap-2"><Star className="w-4 h-4 text-yellow-400" /> {gig.rating} ({gig.total_orders} orders)</p>
-                <p className="flex items-center gap-2"><Shield className="w-4 h-4 text-green-400" /> Escrow protected</p>
+                <p className="flex items-center gap-2"><Shield className="w-4 h-4 text-green-400" /> Buyer payment protection</p>
               </div>
 
               <textarea
@@ -138,7 +138,7 @@ export default function GigDetail() {
               </button>
 
               <p className="text-xs text-white/40 mt-4 text-center">
-                Secure Stripe Checkout. Funds stay in marketplace escrow until you approve delivery.
+                Secure Stripe Checkout. Your order payment is tracked until you confirm delivery.
               </p>
               <button type="button" onClick={handleCopyrightReport} className="w-full mt-3 py-2 rounded-lg border border-white/10 text-xs text-white/50 hover:text-white hover:bg-white/5">
                 Report copyright infringement
