@@ -562,6 +562,10 @@ def register():
     email = (data.get('email') or '').strip().lower()
     username = (data.get('username') or '').strip()
     password = data.get('password') or ''
+    if len(email) > 120 or len(username) > 80:
+        return jsonify({'error': 'Email or username is too long'}), 400
+    if len(username) < 3:
+        return jsonify({'error': 'Username must contain at least 3 characters'}), 400
     if not email or not username or not password:
         return jsonify({'error': 'Email, username and password are required'}), 400
     if len(password) < 6:
@@ -584,13 +588,16 @@ def register():
 
 @app.route('/api/auth/login', methods=['POST'])
 def login():
-    data = request.json
-    identifier = (data.get('email') or '').strip()
-    user = User.query.filter_by(email=identifier).first()
+    data = request.get_json(silent=True) or {}
+    identifier = (data.get('email') or data.get('username') or '').strip()
+    password = data.get('password') or ''
+    if not identifier or not password:
+        return jsonify({'error': 'Email/username and password are required'}), 400
+    user = User.query.filter_by(email=identifier.lower()).first()
     if not user:
         user = User.query.filter_by(username=identifier).first()
     
-    if not user or not user.password_hash or not check_password_hash(user.password_hash, data['password']):
+    if not user or not user.password_hash or not check_password_hash(user.password_hash, password):
         return jsonify({'error': 'Invalid credentials'}), 401
     
     access_token = create_access_token(identity=user.id, expires_delta=timedelta(days=30))
