@@ -151,25 +151,36 @@ def register_order_chat_routes(app, db, User, Order, Message):
             action.buyer_approved = True
             action.seller_approved = True
         action.status = "approved" if action.buyer_approved and action.seller_approved else "requested"
+        refund_requested = False
         if action.status == "approved":
             if order.payment_method == "stripe" and order.payment_id:
                 try:
                     session = stripe.checkout.Session.retrieve(order.payment_id)
-                    payment_intent = session.get("payment_intent")
-                    if payment_intent:
-                        stripe.Refund.create(payment_intent=payment_intent, reason="requested_by_customer", metadata={"order_id": str(order.id)}, idempotency_key=f"order-cancel-refund-{order.id}")
+                    if session.get("payment_status") == "paid":
+                        payment_intent = session.get("payment_intent")
+                        if not payment_intent:
+                            return jsonify({"error": "Stripe has no refundable payment intent for this order; contact support."}), 409
+                        stripe.Refund.create(
+                            payment_intent=payment_intent,
+                            reason="requested_by_customer",
+                            metadata={"order_id": str(order.id)},
+                            idempotency_key=f"order-cancel-refund-{order.id}",
+                        )
+                        refund_requested = True
+                    elif session.get("status") == "open":
+                        stripe.checkout.Session.expire(order.payment_id)
                     else:
-                        return jsonify({"error": "Stripe has no refundable payment intent for this order; contact support."}), 409
+                        return jsonify({"error": "Stripe payment is still processing. Please retry after its status updates."}), 409
                 except Exception:
-                    app.logger.exception("Stripe refund failed for cancellation")
-                    return jsonify({"error": "Stripe refund could not be created. The order remains open; contact support."}), 502
+                    app.logger.exception("Stripe cancellation/refund failed")
+                    return jsonify({"error": "Stripe could not safely cancel or refund this checkout. The order remains open; contact support."}), 502
             elif order.payment_id:
                 return jsonify({"error": "This order was not paid through Stripe. Contact support for a safe refund."}), 409
             order.status = "cancelled"
-            order.escrow_status = "refunded" if order.payment_id else "held"
+            order.escrow_status = "refunded" if refund_requested else "held"
         db.session.commit()
         return jsonify({
-            "message": "Order cancelled and Stripe refund requested." if action.status == "approved" and order.payment_id else ("Order cancelled." if action.status == "approved" else "Cancellation request sent. The other party must also approve."),
+            "message": "Order cancelled and Stripe refund requested." if refund_requested else ("Order cancelled." if action.status == "approved" else "Cancellation request sent. The other party must also approve."),
             "status": order.status, "cancellation_status": action.status,
             "buyer_approved": action.buyer_approved, "seller_approved": action.seller_approved
         })
