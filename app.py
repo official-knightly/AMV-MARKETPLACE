@@ -1502,7 +1502,11 @@ def ai_guard_status():
 @app.route('/api/ai/scan-marketplace', methods=['POST'])
 @jwt_required()
 def scan_marketplace_fake():
-    """Background-style sweep: deactivate fake AMVs (admin/seller with JWT)."""
+    """Admin-triggered AI sweep; regular buyers and sellers cannot mass-hide listings."""
+    user = User.query.get(get_jwt_identity())
+    admin_emails = {e.strip().lower() for e in os.environ.get('ADMIN_EMAILS', '').split(',') if e.strip()}
+    if not user or user.email.strip().lower() not in admin_emails:
+        return jsonify({'error': 'Admin access is required to run a marketplace-wide AI scan.'}), 403
     removed = 0
     gigs = Gig.query.filter_by(is_active=True, flagged_fake=False).all()
     for g in gigs:
