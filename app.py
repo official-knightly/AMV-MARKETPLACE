@@ -21,6 +21,7 @@ import razorpay
 import stripe
 import threading
 import time
+from ai_manager import ai_manager
 from ai_guard import (
     sanitize_text,
     check_rate_limit,
