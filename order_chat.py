@@ -126,7 +126,7 @@ def register_order_chat_routes(app, db, User, Order, Message):
                     session = stripe.checkout.Session.retrieve(order.payment_id)
                     payment_intent = session.get("payment_intent")
                     if payment_intent:
-                        stripe.Refund.create(payment_intent=payment_intent, reason="requested_by_customer", metadata={"order_id": str(order.id)})
+                        stripe.Refund.create(payment_intent=payment_intent, reason="requested_by_customer", metadata={"order_id": str(order.id)}, idempotency_key=f"order-cancel-refund-{order.id}")
                     else:
                         return jsonify({"error": "Stripe has no refundable payment intent for this order; contact support."}), 409
                 except Exception:
