@@ -111,7 +111,7 @@ export default function Orders() {
           <h1 className="text-display text-5xl mb-2">ORDERS</h1>
           <p className="text-white/50 text-sm mb-8 flex items-center gap-2">
             <Bot className="w-4 h-4 text-purple-400" />
-            Escrow: buyer confirms first · else AI (Claude + Codex + Cursor) verifies in background
+            Stripe Checkout · order chat · AI safety checks · buyer confirms delivery before release
           </p>
 
           <div className="flex gap-2 mb-8">
