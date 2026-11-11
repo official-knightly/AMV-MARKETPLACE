@@ -10,13 +10,17 @@ export default function Marketplace() {
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
-    loadGigs();
-  }, [category]);
+    const timer = setTimeout(() => loadGigs(), 250);
+    return () => clearTimeout(timer);
+  }, [category, searchQuery]);
 
   const loadGigs = async () => {
     setLoading(true);
     try {
-      const params = { category: category === 'all' ? undefined : category };
+      const params = {
+        category: category === 'all' ? undefined : category,
+        search: searchQuery.trim() || undefined,
+      };
       const res = await getGigs(params);
       setGigs(res.data.gigs || []);
     } catch (error) {
