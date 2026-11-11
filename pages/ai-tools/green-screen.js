@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
-import Navbar from '../../components/Navbar';
 import { greenScreen } from '../../lib/api';
 import toast from 'react-hot-toast';
 import { useDropzone } from 'react-dropzone';
@@ -41,7 +40,6 @@ export default function GreenScreenTool() {
   return (
     <>
       <Head><title>Green Screen - VORTEX</title></Head>
-      <Navbar />
       <main className="pt-24 pb-16 px-6">
         <div className="max-w-3xl mx-auto">
           <Link href="/ai-tools" className="inline-flex items-center gap-2 text-sm text-white/50 hover:text-white mb-6">
