@@ -86,8 +86,6 @@ class User(db.Model):
     balance = db.Column(db.Float, default=0.0)
     trust_score = db.Column(db.Float, default=5.0)
     google_id = db.Column(db.String(100), unique=True)
-    phone_number = db.Column(db.String(20), unique=True)
-    phone_verified = db.Column(db.Boolean, default=False)
     account_type = db.Column(db.String(20), default='buyer')
     stripe_account_id = db.Column(db.String(120), unique=True)
     stripe_onboarding_complete = db.Column(db.Boolean, default=False)
@@ -205,16 +203,6 @@ class PlatformFee(db.Model):
     recipient_upi = db.Column(db.String(100), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-class PhoneOTP(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    phone_number = db.Column(db.String(20), nullable=False, index=True)
-    otp_code = db.Column(db.String(6), nullable=False)
-    purpose = db.Column(db.String(30), default='signup')
-    expires_at = db.Column(db.DateTime, nullable=False)
-    verified = db.Column(db.Boolean, default=False)
-    consumed = db.Column(db.Boolean, default=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-
 # Full Fiverr-class marketplace APIs (registered before routes use helpers)
 _mp_helpers = {'User': User, 'Gig': Gig, 'Order': Order, 'Review': Review, 'AI_ENGINES': AI_ENGINES}
 from marketplace_full import register_marketplace
@@ -248,7 +236,6 @@ def _migrate_schema():
         'flagged_fake': 'BOOLEAN DEFAULT 0', 'ai_scan_notes': 'TEXT',
     }
     user_new = {
-        'phone_number': 'VARCHAR(20)', 'phone_verified': 'BOOLEAN DEFAULT 0',
         'account_type': "VARCHAR(20) DEFAULT 'buyer'",
         'stripe_account_id': 'VARCHAR(120)',
         'stripe_onboarding_complete': 'BOOLEAN DEFAULT 0',
@@ -299,17 +286,6 @@ def serialize_user(user):
         'stripe_verified': bool(user.stripe_onboarding_complete),
         'account_type': user.account_type or ('seller' if user.is_seller else 'buyer'),
     }
-
-
-def normalize_phone_number(value):
-    digits = re.sub(r'\D', '', value or '')
-    if len(digits) == 10:
-        return f'+91{digits}'
-    if len(digits) == 12 and digits.startswith('91'):
-        return f'+{digits}'
-    if len(digits) >= 10:
-        return f'+{digits}'
-    raise ValueError('Enter a valid phone number')
 
 
 def run_ai_escrow_verify(order_id, app_instance):
@@ -565,49 +541,29 @@ def update_seller_trust_score(user_id):
 
 @app.route('/api/auth/register', methods=['POST'])
 def register():
-    data = request.json
-    phone_number = normalize_phone_number(data.get('phone_number', ''))
-    
-    if User.query.filter_by(email=data['email']).first():
+    data = request.get_json(silent=True) or {}
+    email = (data.get('email') or '').strip().lower()
+    username = (data.get('username') or '').strip()
+    password = data.get('password') or ''
+    if not email or not username or not password:
+        return jsonify({'error': 'Email, username and password are required'}), 400
+    if len(password) < 6:
+        return jsonify({'error': 'Password must be at least 6 characters'}), 400
+    if User.query.filter_by(email=email).first():
         return jsonify({'error': 'Email already registered'}), 400
-    
-    if User.query.filter_by(username=data['username']).first():
+    if User.query.filter_by(username=username).first():
         return jsonify({'error': 'Username already taken'}), 400
-
-    if User.query.filter_by(phone_number=phone_number).first():
-        return jsonify({'error': 'Phone number already registered'}), 400
-
-    otp_code = (data.get('otp_code') or '').strip()
-    otp_record = PhoneOTP.query.filter_by(
-        phone_number=phone_number,
-        otp_code=otp_code,
-        purpose='signup',
-        verified=True,
-        consumed=False
-    ).order_by(PhoneOTP.created_at.desc()).first()
-    if not otp_record or otp_record.expires_at < datetime.utcnow():
-        return jsonify({'error': 'Phone OTP verification required'}), 400
-    
     user = User(
-        email=data['email'],
-        username=data['username'],
-        full_name=data.get('full_name', ''),
-        password_hash=generate_password_hash(data['password']),
-        phone_number=phone_number,
-        phone_verified=True,
+        email=email,
+        username=username,
+        full_name=(data.get('full_name') or '').strip(),
+        password_hash=generate_password_hash(password),
         account_type='buyer'
     )
-    
     db.session.add(user)
-    otp_record.consumed = True
     db.session.commit()
-    
     access_token = create_access_token(identity=user.id, expires_delta=timedelta(days=30))
-    
-    return jsonify({
-        'token': access_token,
-        'user': serialize_user(user)
-    }), 201
+    return jsonify({'token': access_token, 'user': serialize_user(user)}), 201
 
 @app.route('/api/auth/login', methods=['POST'])
 def login():
@@ -678,64 +634,6 @@ def get_current_user():
     
     return jsonify(serialize_user(user))
 
-
-@app.route('/api/auth/otp/request', methods=['POST'])
-def request_phone_otp():
-    data = request.json or {}
-    try:
-        phone_number = normalize_phone_number(data.get('phone_number', ''))
-    except ValueError as e:
-        return jsonify({'error': str(e)}), 400
-
-    if User.query.filter_by(phone_number=phone_number).first():
-        return jsonify({'error': 'Phone number already registered'}), 400
-
-    PhoneOTP.query.filter_by(phone_number=phone_number, consumed=False).update({'consumed': True})
-    otp_code = f'{random.randint(0, 999999):06d}'
-    otp = PhoneOTP(
-        phone_number=phone_number,
-        otp_code=otp_code,
-        purpose='signup',
-        expires_at=datetime.utcnow() + timedelta(minutes=10),
-    )
-    db.session.add(otp)
-    db.session.commit()
-
-    response = {
-        'message': 'OTP generated',
-        'expires_in_seconds': 600,
-        'dev_mode': True,
-    }
-    if os.environ.get('OTP_SMS_PROVIDER', '').strip():
-        response['message'] = 'OTP sent'
-        response['dev_mode'] = False
-    else:
-        response['otp_code'] = otp_code
-        print(f'[OTP DEV] {phone_number}: {otp_code}')
-    return jsonify(response)
-
-
-@app.route('/api/auth/otp/verify', methods=['POST'])
-def verify_phone_otp():
-    data = request.json or {}
-    try:
-        phone_number = normalize_phone_number(data.get('phone_number', ''))
-    except ValueError as e:
-        return jsonify({'error': str(e)}), 400
-
-    otp_code = (data.get('otp_code') or '').strip()
-    otp = PhoneOTP.query.filter_by(
-        phone_number=phone_number,
-        otp_code=otp_code,
-        purpose='signup',
-        consumed=False
-    ).order_by(PhoneOTP.created_at.desc()).first()
-    if not otp or otp.expires_at < datetime.utcnow():
-        return jsonify({'error': 'Invalid or expired OTP'}), 400
-
-    otp.verified = True
-    db.session.commit()
-    return jsonify({'message': 'Phone number verified', 'phone_number': phone_number})
 
 # ==================== FILE UPLOAD ROUTES ====================
 
