@@ -3,7 +3,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import Navbar from '../../components/Navbar';
-import { getGig, createOrder, createRazorpayPayment, verifyRazorpayPayment } from '../../lib/api';
+import { getGig, createOrder, createStripeCheckoutSession } from '../../lib/api';
 import { useAuthStore } from '../../lib/store';
 import toast from 'react-hot-toast';
 import { Star, Shield, Clock, CheckCircle } from 'lucide-react';
@@ -30,38 +30,13 @@ export default function GigDetail() {
     try {
       const orderRes = await createOrder({ gig_id: parseInt(id, 10), message });
       const orderId = orderRes.data.order_id;
-      const payRes = await createRazorpayPayment(orderId);
-      const key = payRes.data.key_id || process.env.NEXT_PUBLIC_RAZORPAY_KEY;
-
-      if (!key || !window.Razorpay) {
-        toast.error('Configure Razorpay keys in .env — order created, pay from dashboard');
-        router.push('/orders');
-        return;
+      const paymentRes = await createStripeCheckoutSession(orderId);
+      if (!paymentRes.data.checkout_url) {
+        throw new Error('Stripe did not return a checkout URL');
       }
-
-      const options = {
-        key,
-        amount: payRes.data.amount * 100,
-        currency: 'INR',
-        name: 'VORTEX',
-        description: gig.title,
-        order_id: payRes.data.razorpay_order_id,
-        handler: async (response) => {
-          await verifyRazorpayPayment({
-            order_id: orderId,
-            razorpay_order_id: response.razorpay_order_id,
-            razorpay_payment_id: response.razorpay_payment_id,
-            razorpay_signature: response.razorpay_signature,
-          });
-          toast.success('Payment held in escrow until you approve delivery');
-          router.push('/orders');
-        },
-      };
-      const rzp = new window.Razorpay(options);
-      rzp.open();
+      window.location.assign(paymentRes.data.checkout_url);
     } catch (e) {
-      toast.error(e.response?.data?.error || 'Order failed');
-    } finally {
+      toast.error(e.response?.data?.error || e.message || 'Could not start secure checkout');
       setPaying(false);
     }
   };
@@ -79,7 +54,6 @@ export default function GigDetail() {
     <>
       <Head>
         <title>{gig.title} - VORTEX</title>
-        <script src="https://checkout.razorpay.com/v1/checkout.js" async />
       </Head>
       <Navbar />
 
@@ -150,11 +124,11 @@ export default function GigDetail() {
                 className="w-full py-4 rounded-xl bg-white text-black font-semibold hover:bg-gray-200 disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 <CheckCircle className="w-5 h-5" />
-                {paying ? 'Processing...' : 'Order Now (Escrow)'}
+                {paying ? 'Redirecting to Stripe...' : 'Pay securely with Stripe'}
               </button>
 
               <p className="text-xs text-white/40 mt-4 text-center">
-                Payment held in escrow until you approve the delivery.
+                Secure Stripe Checkout. Funds stay in marketplace escrow until you approve delivery.
               </p>
             </div>
           </div>
