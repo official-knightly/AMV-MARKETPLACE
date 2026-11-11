@@ -5,6 +5,7 @@ import { GoogleOAuthProvider } from '@react-oauth/google';
 import { useAuthStore } from '../lib/store';
 import { getCurrentUser } from '../lib/api';
 import Navbar from '../components/Navbar';
+import MarketplaceAssistant from '../components/MarketplaceAssistant';
 
 function MyApp({ Component, pageProps }) {
   const { setAuth } = useAuthStore();
@@ -23,6 +24,7 @@ function MyApp({ Component, pageProps }) {
     <>
       <Navbar />
       <Component {...pageProps} />
+      <MarketplaceAssistant />
       <Toaster 
         position="top-right"
         toastOptions={{
