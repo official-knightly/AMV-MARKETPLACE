@@ -221,6 +221,10 @@ register_stripe_routes(app, db, User, Order, Gig)
 from order_chat import register_order_chat_routes
 register_order_chat_routes(app, db, User, Order, Message)
 
+# Admin dispute and copyright moderation queues
+from admin_reports import register_admin_routes
+register_admin_routes(app, db, User, Gig, Order, PlatformFee, PLATFORM_FEE_RATE, PLATFORM_UPI_ID)
+
 # Public AI assistant for finding real marketplace listings
 from marketplace_assistant import register_marketplace_assistant
 register_marketplace_assistant(app, db, Gig)
@@ -297,6 +301,7 @@ def serialize_user(user):
         'upi_id': user.upi_id,
         'stripe_verified': bool(user.stripe_onboarding_complete),
         'account_type': user.account_type or ('seller' if user.is_seller else 'buyer'),
+        'is_admin': user.email.strip().lower() in {e.strip().lower() for e in os.environ.get('ADMIN_EMAILS', '').split(',') if e.strip()},
     }
 
 
