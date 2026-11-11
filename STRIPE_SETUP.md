@@ -40,3 +40,13 @@ Stripe says India-based Stripe accounts and Connect are invite-only. Stripe's In
 3. Test Checkout with Stripe's published test payment details.
 4. Complete seller onboarding in test mode and confirm the status endpoint reports the actual Stripe account state.
 5. Do not switch to live keys until Stripe approves the business and the complete marketplace funds flow.
+
+
+## Order chat, cancellation, and AI Guard
+
+- Every paid order has an authenticated buyer/seller chat at the Orders page. Messages are stored against that order and only its two participants can read or send them.
+- The chat API applies deterministic checks for contact-detail sharing, off-platform payment requests, suspicious links, and abusive language. If configured, it also asks NVIDIA NIM's OpenAI-compatible Chat Completions endpoint (default model: `moonshotai/kimi-k3`) to classify message safety. Provider outages fall back to deterministic checks.
+- Configure `NVIDIA_API_KEY` as a private backend environment variable and optionally `NVIDIA_MODEL`. Never paste the key into source code, browser variables, commits, or public issue reports. If a key was exposed, revoke it and create a replacement.
+- Either party can request cancellation. Paid orders are cancelled only after both buyer and seller approve; the backend then requests a refund against the original Stripe Checkout payment. Unpaid pending orders can be cancelled without a refund.
+- AI moderation is a safety filter, not a dispute judge. AI does not decide who gets refunded or release money automatically from a chat classification. Use the order dispute/support flow for contested cases.
+- Stripe Checkout is the only enabled order checkout route. Legacy Razorpay, direct UPI checkout, and manual wallet-credit refund endpoints are disabled.
