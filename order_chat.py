@@ -146,10 +146,20 @@ def register_order_chat_routes(app, db, User, Order, Message):
             action.buyer_approved = True
         else:
             action.seller_approved = True
-        # For unpaid pending orders, buyer cancellation is enough; seller can agree too.
-        if order.status == "pending" and not order.payment_id:
-            action.buyer_approved = True
-            action.seller_approved = True
+        # A buyer may cancel an unpaid pending order without waiting for seller approval.
+        if order.status == "pending" and uid == order.buyer_id:
+            if not order.payment_id:
+                action.buyer_approved = True
+                action.seller_approved = True
+            elif order.payment_method == "stripe":
+                try:
+                    pending_session = stripe.checkout.Session.retrieve(order.payment_id)
+                    if pending_session.get("payment_status") != "paid" and pending_session.get("status") in ("open", "expired"):
+                        action.buyer_approved = True
+                        action.seller_approved = True
+                except Exception:
+                    app.logger.exception("Could not check unpaid Stripe checkout before cancellation")
+                    return jsonify({"error": "Could not verify checkout status. Please retry in a moment."}), 502
         action.status = "approved" if action.buyer_approved and action.seller_approved else "requested"
         refund_requested = False
         if action.status == "approved":
@@ -169,6 +179,8 @@ def register_order_chat_routes(app, db, User, Order, Message):
                         refund_requested = True
                     elif session.get("status") == "open":
                         stripe.checkout.Session.expire(order.payment_id)
+                    elif session.get("status") == "expired":
+                        pass
                     else:
                         return jsonify({"error": "Stripe payment is still processing. Please retry after its status updates."}), 409
                 except Exception:
