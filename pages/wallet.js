@@ -12,7 +12,7 @@ import {
   Building2
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import api from '../lib/api';
+import api, { startStripeSellerOnboarding, getStripeSellerStatus, withdrawToStripe } from '../lib/api';
 
 export default function Wallet() {
   const router = useRouter();
@@ -32,6 +32,7 @@ export default function Wallet() {
     bank_name: ''
   });
   const [processing, setProcessing] = useState(false);
+  const [stripeStatus, setStripeStatus] = useState(null);
 
   useEffect(() => {
     if (!user) {
@@ -65,6 +66,9 @@ export default function Wallet() {
       setStats(statsRes.data);
 
       // Load saved payment methods
+      const stripeRes = await getStripeSellerStatus().catch(() => null);
+      if (stripeRes) setStripeStatus(stripeRes.data);
+
       const methodsRes = await api.get('/wallet/withdraw-methods');
       if (methodsRes.data.upi_id) {
         setUpiId(methodsRes.data.upi_id);
@@ -78,6 +82,15 @@ export default function Wallet() {
       console.error('Error loading wallet:', error);
       toast.error('Failed to load wallet data');
       setLoading(false);
+    }
+  };
+
+  const handleStripeOnboarding = async () => {
+    try {
+      const response = await startStripeSellerOnboarding();
+      if (response.data.url) window.location.assign(response.data.url);
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Could not start Stripe verification');
     }
   };
 
@@ -114,22 +127,24 @@ export default function Wallet() {
     try {
       setProcessing(true);
 
-      // Save payment method first
-      await api.post('/wallet/save-payment-method', {
-        method: withdrawMethod,
-        upi_id: withdrawMethod === 'upi' ? upiId : null,
-        bank_details: withdrawMethod === 'bank_transfer' ? JSON.stringify(bankDetails) : null
-      });
-
-      // Request withdrawal
-      const response = await api.post('/withdrawal/request', {
-        amount,
-        method: withdrawMethod,
-        upi_id: withdrawMethod === 'upi' ? upiId : null,
-        bank_details: withdrawMethod === 'bank_transfer' ? JSON.stringify(bankDetails) : null
-      });
-
-      toast.success('Withdrawal request submitted successfully!');
+      if (withdrawMethod === 'stripe') {
+        await withdrawToStripe(amount);
+        toast.success('Funds transferred to your Stripe connected balance');
+      } else {
+        // Save the selected legacy withdrawal method first
+        await api.post('/wallet/save-payment-method', {
+          method: withdrawMethod,
+          upi_id: withdrawMethod === 'upi' ? upiId : null,
+          bank_details: withdrawMethod === 'bank_transfer' ? JSON.stringify(bankDetails) : null
+        });
+        await api.post('/withdrawal/request', {
+          amount,
+          method: withdrawMethod,
+          upi_id: withdrawMethod === 'upi' ? upiId : null,
+          bank_details: withdrawMethod === 'bank_transfer' ? JSON.stringify(bankDetails) : null
+        });
+        toast.success('Withdrawal request submitted successfully!');
+      }
       setShowWithdrawModal(false);
       setWithdrawAmount('');
       loadWalletData();
@@ -157,6 +172,21 @@ export default function Wallet() {
             Seller Wallet
           </h1>
           <p className="text-gray-400">Manage your earnings and withdrawals</p>
+        </div>
+
+        <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 mb-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <h2 className="text-lg font-semibold">Stripe seller verification</h2>
+            <p className="text-sm text-gray-400 mt-1">
+              {stripeStatus?.verified ? "Your Stripe account is verified and payouts are enabled." : "Verify your identity and connect a payout account securely through Stripe."}
+            </p>
+            {stripeStatus?.connected && !stripeStatus?.verified && (
+              <p className="text-xs text-yellow-400 mt-2">Verification or payout setup is still pending.</p>
+            )}
+          </div>
+          <button type="button" onClick={handleStripeOnboarding} className="px-5 py-3 rounded-lg bg-white text-black font-semibold hover:bg-gray-200">
+            {stripeStatus?.verified ? "Update Stripe details" : "Verify with Stripe"}
+          </button>
         </div>
 
         {/* Balance Cards */}
@@ -306,7 +336,7 @@ export default function Wallet() {
 
               <div>
                 <label className="block text-sm font-medium mb-2">Withdrawal Method</label>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-3 gap-3">
                   <button
                     type="button"
                     onClick={() => setWithdrawMethod('upi')}
@@ -318,6 +348,18 @@ export default function Wallet() {
                   >
                     <CreditCard className="w-6 h-6 mx-auto mb-2" />
                     <p className="text-sm font-semibold">UPI</p>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setWithdrawMethod('stripe')}
+                    className={`p-4 rounded-lg border-2 transition-all ${
+                      withdrawMethod === 'stripe'
+                        ? 'border-purple-500 bg-purple-500/10'
+                        : 'border-gray-700 hover:border-gray-600'
+                    }`}
+                  >
+                    <CreditCard className="w-6 h-6 mx-auto mb-2" />
+                    <p className="text-sm font-semibold">Stripe</p>
                   </button>
                   <button
                     type="button"
@@ -333,6 +375,10 @@ export default function Wallet() {
                   </button>
                 </div>
               </div>
+
+              {withdrawMethod === 'stripe' && (
+                <p className="text-sm text-gray-400">Withdrawals use your verified Stripe connected account. Complete Stripe verification above before withdrawing.</p>
+              )}
 
               {withdrawMethod === 'upi' && (
                 <div>
