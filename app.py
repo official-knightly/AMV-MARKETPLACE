@@ -214,6 +214,10 @@ GigPackage = _mp_exports['GigPackage']
 from stripe_payments import register_stripe_routes
 register_stripe_routes(app, db, User, Order, Gig)
 
+# Secure order chat + AI moderation + mutual cancellation/refund workflow
+from order_chat import register_order_chat_routes
+register_order_chat_routes(app, db, User, Order, Message)
+
 # ==================== HELPER FUNCTIONS ====================
 
 def _migrate_schema():
@@ -961,6 +965,7 @@ def create_order():
 @app.route('/api/payment/razorpay/create', methods=['POST'])
 @jwt_required()
 def create_razorpay_payment():
+    return jsonify({'error': 'Razorpay is disabled. Use Stripe Checkout for all marketplace payments.'}), 410
     data = request.json
     order = Order.query.get_or_404(data['order_id'])
     
@@ -985,6 +990,7 @@ def create_razorpay_payment():
 @app.route('/api/payment/razorpay/verify', methods=['POST'])
 @jwt_required()
 def verify_razorpay_payment():
+    return jsonify({'error': 'Razorpay is disabled. Use Stripe Checkout for all marketplace payments.'}), 410
     data = request.json
     order = Order.query.get_or_404(data['order_id'])
     
@@ -1014,7 +1020,8 @@ def verify_razorpay_payment():
 @app.route('/api/payment/upi/create', methods=['POST'])
 @jwt_required()
 def create_upi_payment():
-    """Handle UPI payments"""
+    """Legacy direct UPI checkout disabled; Stripe Checkout is the only order payment path."""
+    return jsonify({'error': 'Direct UPI checkout is disabled. Use Stripe Checkout.'}), 410
     data = request.json
     order = Order.query.get_or_404(data['order_id'])
     
