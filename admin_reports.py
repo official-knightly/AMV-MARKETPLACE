@@ -90,10 +90,7 @@ def register_admin_routes(app, db, User, Gig, Order, PlatformFee, platform_fee_r
     def admin_list_moderation_queue():
         if not admin_required_user():
             return admin_error()
-        from sqlalchemy import or_
-        gigs = Gig.query.filter(
-            or_(Gig.flagged_fake.is_(True), Gig.ai_scan_notes.isnot(None))
-        ).order_by(Gig.created_at.desc()).limit(200).all()
+        gigs = Gig.query.filter_by(flagged_fake=True).order_by(Gig.created_at.desc()).limit(200).all()
         return jsonify({"listings": [{
             "id": gig.id, "title": gig.title, "description": (gig.description or "")[:1000],
             "category": gig.category, "is_active": gig.is_active,
