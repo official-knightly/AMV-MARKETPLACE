@@ -71,7 +71,7 @@ def apply_security_headers(response):
     return response
 
 
-# --- Video / AMV analysis (Codex + Cursor heuristics) ---
+# --- Video / AMV analysis (local OpenCV checks) ---
 
 def _analyze_video_url(video_url):
     """OpenCV analysis when URL is local path or downloadable; else URL heuristics."""
