@@ -29,6 +29,9 @@ export default function Navbar() {
         <Link href="/ai-tools" className="text-sm text-white/60 hover:text-white transition">
           AI Tools
         </Link>
+        {user?.is_admin && (
+          <Link href="/admin" className="text-sm text-white/60 hover:text-white transition">Admin</Link>
+        )}
         <Link href="/how-it-works" className="text-sm text-white/60 hover:text-white transition">
           How It Works
         </Link>
@@ -89,6 +92,7 @@ export default function Navbar() {
             <Link href="/ai-tools" className="text-white/80 hover:text-white transition">
               AI Tools
             </Link>
+            {user?.is_admin && <Link href="/admin" className="text-white/80 hover:text-white transition">Admin</Link>}
             <Link href="/how-it-works" className="text-white/80 hover:text-white transition">
               How It Works
             </Link>
