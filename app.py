@@ -72,9 +72,9 @@ stripe.api_key = STRIPE_SECRET_KEY
 
 GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID', '')
 
-# Platform fee — 10% goes to this UPI; seller gets 90% in wallet
+# Platform fee — 5% marketplace commission; seller receives 95% before any payout fees
 PLATFORM_UPI_ID = os.environ.get('PLATFORM_UPI_ID', '7407589434@fam')
-PLATFORM_FEE_RATE = float(os.environ.get('PLATFORM_FEE_RATE', '0.10'))
+PLATFORM_FEE_RATE = float(os.environ.get('PLATFORM_FEE_RATE', '0.05'))
 
 # ==================== DATABASE MODELS ====================
 
@@ -2046,7 +2046,7 @@ def get_wallet_transactions():
         'type': 'earning',
         'amount': o.amount * 0.85,
         'gross_amount': o.amount,
-        'platform_fee': o.amount * 0.15,
+        'platform_fee': round(o.amount * PLATFORM_FEE_RATE, 2),
         'description': f"Payment for: {Gig.query.get(o.gig_id).title}",
         'buyer': User.query.get(o.buyer_id).username,
         'date': o.completed_at.isoformat() if o.completed_at else None,
