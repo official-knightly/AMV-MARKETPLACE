@@ -42,7 +42,7 @@ export default function OrderChat({ orderId, closed }) {
     <section className="mt-5 rounded-xl border border-white/10 bg-black/30 p-4">
       <div className="flex items-center justify-between mb-3">
         <h4 className="font-semibold">Buyer · Seller chat</h4>
-        <span className="text-xs text-white/40">AI Guard active</span>
+        <span className="text-xs text-white/40">Safety Guard active</span>
       </div>
       <div className="max-h-64 overflow-y-auto space-y-3 mb-3 pr-1">
         {messages.map((message) => (
@@ -65,7 +65,7 @@ export default function OrderChat({ orderId, closed }) {
           </button>
         </form>
       ) : <p className="text-xs text-white/40">This order is closed; chat is read-only.</p>}
-      <p className="text-xs text-white/35 mt-2">AI checks messages for scams, harassment, suspicious links and attempts to move payments off-platform. Never share passwords or payment details.</p>
+      <p className="text-xs text-white/35 mt-2">Automated safety checks messages for scams, harassment, suspicious links and attempts to move payments off-platform. Never share passwords or payment details.</p>
     </section>
   );
 }
