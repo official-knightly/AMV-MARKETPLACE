@@ -12,9 +12,9 @@ import io
 
 class AIManager:
     def __init__(self):
-        self.anthropic_client = anthropic.Anthropic(
-            api_key=os.environ.get("ANTHROPIC_API_KEY", "")
-        )
+        # Keep the marketplace bootable when optional AI credentials are not configured.
+        api_key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
+        self.anthropic_client = anthropic.Anthropic(api_key=api_key) if api_key else None
         openai.api_key = os.environ.get("OPENAI_API_KEY", "")
         
     # ==================== CONTENT MODERATION ====================
