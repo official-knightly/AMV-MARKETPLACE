@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
-import Navbar from '../components/Navbar';
 import OrderChat from '../components/OrderChat';
 import { useAuthStore } from '../lib/store';
 import { getMyOrders, completeOrder, deliverOrder, disputeEscrow, requestAiVerify, confirmStripeCheckout, requestOrderCancellation } from '../lib/api';
@@ -105,7 +104,6 @@ export default function Orders() {
   return (
     <>
       <Head><title>Orders - VORTEX</title></Head>
-      <Navbar />
       <main className="pt-24 pb-16 px-6">
         <div className="max-w-4xl mx-auto">
           <h1 className="text-display text-5xl mb-2">ORDERS</h1>
