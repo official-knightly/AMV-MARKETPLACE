@@ -23,7 +23,7 @@ services:
       - key: NVIDIA_API_KEY
         sync: false
       - key: NVIDIA_MODEL
-        value: moonshotai/kimi-k3
+        value: nvidia/nemotron-3.5-lightning-30b-a3b
       - key: NVIDIA_ASSISTANT_MODEL
         value: nvidia/nemotron-3.5-lightning-30b-a3b
       - key: STRIPE_WEBHOOK_SECRET
