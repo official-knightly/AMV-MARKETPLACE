@@ -79,9 +79,9 @@ def register_marketplace_assistant(app, db, Gig):
                         ],
                         "temperature": 0.4,
                         "top_p": 0.9,
-                        "max_tokens": 700,
+                        "max_tokens": 1400,
                         "stream": False,
-                        "extra_body": {"chat_template_kwargs": {"enable_thinking": True}, "reasoning_budget": 1024},
+                        "extra_body": {"chat_template_kwargs": {"enable_thinking": True}, "reasoning_budget": 512},
                     },
                     timeout=25,
                 )
