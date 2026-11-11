@@ -2,8 +2,9 @@ import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import Navbar from '../components/Navbar';
+import OrderChat from '../components/OrderChat';
 import { useAuthStore } from '../lib/store';
-import { getMyOrders, completeOrder, deliverOrder, disputeEscrow, requestAiVerify, confirmStripeCheckout } from '../lib/api';
+import { getMyOrders, completeOrder, deliverOrder, disputeEscrow, requestAiVerify, confirmStripeCheckout, requestOrderCancellation } from '../lib/api';
 import toast from 'react-hot-toast';
 import { Shield, CheckCircle, AlertTriangle, Bot, Download } from 'lucide-react';
 
@@ -72,6 +73,18 @@ export default function Orders() {
       load();
     } catch (e) {
       toast.error(e.response?.data?.error || 'Failed');
+    }
+  };
+
+  const handleCancel = async (id) => {
+    const reason = prompt('Why should this order be cancelled?');
+    if (!reason) return;
+    try {
+      const res = await requestOrderCancellation(id, { reason });
+      toast.success(res.data.message || 'Cancellation request submitted');
+      load();
+    } catch (e) {
+      toast.error(e.response?.data?.error || 'Could not request cancellation');
     }
   };
 
@@ -147,6 +160,15 @@ export default function Orders() {
                   </a>
                 )}
 
+                {o.status !== 'completed' && o.status !== 'cancelled' && o.status !== 'disputed' && (
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <button type="button" onClick={() => handleCancel(o.id)} className="rounded-lg border border-red-500/40 px-3 py-2 text-sm text-red-300 hover:bg-red-500/10">
+                      Request / approve cancellation
+                    </button>
+                    <span className="self-center text-xs text-white/35">Paid orders require both sides to agree; Stripe refund is then requested.</span>
+                  </div>
+                )}
+
                 {tab === 'seller' && o.status === 'in_progress' && o.escrow_status === 'held' && !o.delivery_file && (
                   <div className="flex gap-2 mt-4">
                     <input
@@ -185,6 +207,8 @@ export default function Orders() {
                     </button>
                   </div>
                 )}
+
+                <OrderChat orderId={o.id} closed={o.status === 'completed' || o.status === 'cancelled'} />
 
                 {tab === 'buyer' && o.delivery_file && !o.buyer_confirmed && o.escrow_status === 'held' && (
                   <p className="text-xs text-white/40 mt-3">
