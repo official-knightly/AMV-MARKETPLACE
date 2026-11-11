@@ -56,7 +56,7 @@ if database_url.startswith('postgres://'):
     database_url = database_url.replace('postgres://', 'postgresql://', 1)
 app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB max file size
+app.config['MAX_CONTENT_LENGTH'] = 110 * 1024 * 1024  # 100MB video + thumbnail upload headroom
 
 db = SQLAlchemy(app)
 jwt = JWTManager(app)
