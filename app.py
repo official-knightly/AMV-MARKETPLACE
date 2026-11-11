@@ -218,6 +218,10 @@ register_stripe_routes(app, db, User, Order, Gig)
 from order_chat import register_order_chat_routes
 register_order_chat_routes(app, db, User, Order, Message)
 
+# Public AI assistant for finding real marketplace listings
+from marketplace_assistant import register_marketplace_assistant
+register_marketplace_assistant(app, db, Gig)
+
 # ==================== HELPER FUNCTIONS ====================
 
 def _migrate_schema():
