@@ -774,6 +774,18 @@ def analyze_gig():
 
 # ==================== GIG ROUTES ====================
 
+@app.route('/api/marketplace/stats', methods=['GET'])
+def marketplace_stats():
+    average_rating = db.session.query(db.func.avg(Review.rating)).scalar()
+    return jsonify({
+        'active_sellers': User.query.filter_by(is_seller=True).count(),
+        'active_listings': Gig.query.filter_by(is_active=True, flagged_fake=False).count(),
+        'completed_orders': Order.query.filter_by(status='completed').count(),
+        'average_rating': round(float(average_rating), 2) if average_rating is not None else None,
+        'platform_fee_rate': PLATFORM_FEE_RATE,
+    })
+
+
 @app.route('/api/gigs', methods=['GET'])
 def get_gigs():
     category = request.args.get('category', 'all')
@@ -1841,7 +1853,7 @@ def deliver_order_with_ai_verification(order_id):
         order.escrow_status = 'released'
         order.completed_at = datetime.utcnow()
         
-        # Release payment to seller (85% after platform fee)
+        # Release seller share after the configured platform commission
         seller = User.query.get(order.seller_id)
         seller.balance += order.amount * (1 - PLATFORM_FEE_RATE)
         
