@@ -1508,7 +1508,8 @@ def request_ai_verify(order_id):
 @app.route('/api/ai/guard/status', methods=['GET'])
 def ai_guard_status():
     return jsonify({
-        'active': True,
+        'active': bool(ai_manager.status().get('configured') or os.environ.get('NVIDIA_API_KEY')),
+        'provider': ai_manager.status().get('provider'),
         'engines': list(AI_ENGINES),
         'auto_verify_hours': AUTO_VERIFY_HOURS,
         'features': [
