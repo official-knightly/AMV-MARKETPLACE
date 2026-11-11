@@ -12,7 +12,7 @@ import {
   Building2
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import api, { startStripeSellerOnboarding, getStripeSellerStatus, withdrawToStripe } from '../lib/api';
+import api, { startStripeSellerOnboarding, getStripeSellerStatus } from '../lib/api';
 
 export default function Wallet() {
   const router = useRouter();
@@ -127,24 +127,19 @@ export default function Wallet() {
     try {
       setProcessing(true);
 
-      if (withdrawMethod === 'stripe') {
-        await withdrawToStripe(amount);
-        toast.success('Funds transferred to your Stripe connected balance');
-      } else {
-        // Save the selected legacy withdrawal method first
-        await api.post('/wallet/save-payment-method', {
-          method: withdrawMethod,
-          upi_id: withdrawMethod === 'upi' ? upiId : null,
-          bank_details: withdrawMethod === 'bank_transfer' ? JSON.stringify(bankDetails) : null
-        });
-        await api.post('/withdrawal/request', {
-          amount,
-          method: withdrawMethod,
-          upi_id: withdrawMethod === 'upi' ? upiId : null,
-          bank_details: withdrawMethod === 'bank_transfer' ? JSON.stringify(bankDetails) : null
-        });
-        toast.success('Withdrawal request submitted successfully!');
-      }
+      // Save the selected withdrawal method, then submit the withdrawal request
+      await api.post('/wallet/save-payment-method', {
+        method: withdrawMethod,
+        upi_id: withdrawMethod === 'upi' ? upiId : null,
+        bank_details: withdrawMethod === 'bank_transfer' ? JSON.stringify(bankDetails) : null
+      });
+      await api.post('/withdrawal/request', {
+        amount,
+        method: withdrawMethod,
+        upi_id: withdrawMethod === 'upi' ? upiId : null,
+        bank_details: withdrawMethod === 'bank_transfer' ? JSON.stringify(bankDetails) : null
+      });
+      toast.success('Withdrawal request submitted successfully!');
       setShowWithdrawModal(false);
       setWithdrawAmount('');
       loadWalletData();
@@ -336,7 +331,7 @@ export default function Wallet() {
 
               <div>
                 <label className="block text-sm font-medium mb-2">Withdrawal Method</label>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-2 gap-4">
                   <button
                     type="button"
                     onClick={() => setWithdrawMethod('upi')}
@@ -348,18 +343,6 @@ export default function Wallet() {
                   >
                     <CreditCard className="w-6 h-6 mx-auto mb-2" />
                     <p className="text-sm font-semibold">UPI</p>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setWithdrawMethod('stripe')}
-                    className={`p-4 rounded-lg border-2 transition-all ${
-                      withdrawMethod === 'stripe'
-                        ? 'border-purple-500 bg-purple-500/10'
-                        : 'border-gray-700 hover:border-gray-600'
-                    }`}
-                  >
-                    <CreditCard className="w-6 h-6 mx-auto mb-2" />
-                    <p className="text-sm font-semibold">Stripe</p>
                   </button>
                   <button
                     type="button"
@@ -375,10 +358,6 @@ export default function Wallet() {
                   </button>
                 </div>
               </div>
-
-              {withdrawMethod === 'stripe' && (
-                <p className="text-sm text-gray-400">Withdrawals use your verified Stripe connected account. Complete Stripe verification above before withdrawing.</p>
-              )}
 
               {withdrawMethod === 'upi' && (
                 <div>
