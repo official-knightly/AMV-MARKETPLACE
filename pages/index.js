@@ -1,14 +1,18 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { ArrowRight, Shield, Zap, TrendingUp, Star } from 'lucide-react';
-import { getGigs } from '../lib/api';
+import { getGigs, getMarketplaceStats } from '../lib/api';
 
 export default function Home() {
   const [featuredGigs, setFeaturedGigs] = useState([]);
+  const [stats, setStats] = useState(null);
 
   useEffect(() => {
     getGigs({ per_page: 6 })
-      .then(res => setFeaturedGigs(res.data.gigs))
+      .then(res => setFeaturedGigs(res.data.gigs || []))
+      .catch(console.error);
+    getMarketplaceStats()
+      .then(res => setStats(res.data))
       .catch(console.error);
   }, []);
 
@@ -53,16 +57,16 @@ export default function Home() {
           {/* Stats */}
           <div className="flex flex-wrap justify-center gap-12 mt-20 pt-12 border-t border-white/10">
             <div>
-              <div className="text-display text-5xl mb-1">4.2K</div>
+              <div className="text-display text-5xl mb-1">{stats ? stats.active_sellers.toLocaleString() : "—"}</div>
               <div className="text-xs text-white/50 uppercase tracking-wider">Active Editors</div>
             </div>
             <div>
-              <div className="text-display text-5xl mb-1">$0</div>
-              <div className="text-xs text-white/50 uppercase tracking-wider">Escrow Risk</div>
+              <div className="text-display text-5xl mb-1">{stats ? stats.active_listings.toLocaleString() : "—"}</div>
+              <div className="text-xs text-white/50 uppercase tracking-wider">Active Listings</div>
             </div>
             <div>
-              <div className="text-display text-5xl mb-1">98%</div>
-              <div className="text-xs text-white/50 uppercase tracking-wider">Satisfaction</div>
+              <div className="text-display text-5xl mb-1">{stats ? `${Math.round(stats.platform_fee_rate * 100)}%` : "—"}</div>
+              <div className="text-xs text-white/50 uppercase tracking-wider">Platform Fee</div>
             </div>
           </div>
         </div>
