@@ -124,11 +124,11 @@ export default function AdminDashboard() {
           </button>
         </div>
 
-        <section className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-10">
+        <section className="grid grid-cols-2 lg:grid-cols-6 gap-3 mb-10">
           {[
             ['Users', counts.users], ['Active listings', counts.active_gigs],
             ['Orders', counts.orders], ['Open disputes', counts.disputes],
-            ['Copyright queue', counts.copyright_reports],
+            ['AI flags', counts.moderation_queue], ['Copyright queue', counts.copyright_reports],
           ].map(([label, value]) => (
             <div key={label} className="rounded-xl border border-white/10 bg-card p-5">
               <p className="text-xs text-white/45">{label}</p>
