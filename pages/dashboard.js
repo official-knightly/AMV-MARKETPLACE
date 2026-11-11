@@ -9,13 +9,14 @@ import toast from 'react-hot-toast';
 
 export default function Dashboard() {
   const router = useRouter();
-  const { user, isAuthenticated, updateUser } = useAuthStore();
+  const { user, isAuthenticated, authReady, updateUser } = useAuthStore();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('buyer');
   const [currentRole, setCurrentRole] = useState('buyer');
 
   useEffect(() => {
+    if (!authReady) return;
     if (!isAuthenticated) {
       router.push('/login');
       return;
@@ -29,7 +30,7 @@ export default function Dashboard() {
     
     setCurrentRole(user?.is_seller ? 'seller' : 'buyer');
     loadOrders();
-  }, [isAuthenticated, activeTab]);
+  }, [authReady, isAuthenticated, activeTab]);
 
   const loadOrders = async () => {
     setLoading(true);
@@ -55,7 +56,7 @@ export default function Dashboard() {
     }
   };
 
-  if (!isAuthenticated) {
+  if (!authReady || !isAuthenticated) {
     return null;
   }
 
