@@ -137,13 +137,13 @@ export default function Home() {
             <div className="text-xs text-white/50 uppercase tracking-widest mb-3">Protection</div>
             <h2 className="text-display text-5xl md:text-7xl mb-4">ZERO SCAM POLICY</h2>
             <p className="text-white/60 max-w-xl mx-auto">
-              Buyer confirms the AMV first, or AI (Claude, Codex, Cursor) verifies delivery. Fake AMVs removed automatically.
+              Buyer confirms delivery, while NVIDIA-powered checks and local safety rules help flag suspicious listings and messages.
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {[
-              { icon: Shield, title: 'Escrow Payments', desc: 'Funds held until buyer confirms delivery. No exceptions.' },
+              { icon: Shield, title: 'Escrow Payments', desc: 'Order payment is tracked until the buyer confirms delivery.' },
               { icon: Zap, title: 'Stolen Edit Detection', desc: 'AI fingerprint matching flags plagiarized work before listing.' },
               { icon: TrendingUp, title: 'Quality Gate', desc: 'Auto export analysis blocks low-quality deliverables.' },
               { icon: Star, title: 'AI Trust Score', desc: 'Editors scored on history, delivery rate and reviews.' },
