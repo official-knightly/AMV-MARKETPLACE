@@ -67,7 +67,37 @@ def register_order_chat_routes(app, db, User, Order, Message):
         created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     def participant(order, uid):
+        try:
+            uid = int(uid)
+        except (TypeError, ValueError):
+            return False
         return order.buyer_id == uid or order.seller_id == uid
+
+    @app.route("/api/chat/messages/<int:order_id>", methods=["GET"])
+    @jwt_required()
+    def get_order_chat_messages(order_id):
+        uid = get_jwt_identity()
+        order = Order.query.get_or_404(order_id)
+        if not participant(order, uid):
+            return jsonify({"error": "You are not part of this order"}), 403
+        messages = Message.query.filter_by(order_id=order_id).order_by(Message.timestamp.asc(), Message.id.asc()).all()
+        items = []
+        for message in messages:
+            sender = User.query.get(message.sender_id)
+            items.append({
+                "id": message.id,
+                "order_id": message.order_id,
+                "content": message.content,
+                "timestamp": message.timestamp.isoformat() if message.timestamp else None,
+                "is_read": bool(message.is_read),
+                "message_type": message.message_type or "text",
+                "sender": {
+                    "id": sender.id if sender else message.sender_id,
+                    "username": sender.username if sender else "Participant",
+                    "profile_image": sender.profile_image if sender else None,
+                },
+            })
+        return jsonify({"messages": items})
 
     @app.route("/api/chat/messages/<int:order_id>", methods=["POST"])
     @jwt_required()
@@ -85,6 +115,7 @@ def register_order_chat_routes(app, db, User, Order, Message):
         result = _moderate(content)
         if not result["allowed"]:
             return jsonify({"error": result["reason"], "ai_guard": {"blocked": True, "risk": result["risk"]}}), 422
+        uid = int(uid)
         message = Message(order_id=order_id, sender_id=uid, content=content, timestamp=datetime.utcnow(), message_type="text")
         db.session.add(message)
         db.session.commit()
