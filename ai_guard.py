@@ -1,7 +1,5 @@
 """
-VORTEX AI Guard — multi-engine protection layer.
-Uses Claude API when configured; always runs Codex/Cursor-style
-heuristic engines locally (video analysis, fingerprints, security rules).
+VORTEX AI Guard — NVIDIA/Anthropic text review plus local safety and video checks.
 """
 import os
 import re
@@ -247,7 +245,7 @@ def scan_listing_for_fake(title, description, category, video_url, thumbnail=Non
         f'Title:{title} Category:{category} Description:{description[:400]}'
     )
     if claude:
-        engines_used.append('claude')
+        engines_used.append('nvidia_nim' if NVIDIA_API_KEY and not ANTHROPIC_API_KEY else 'anthropic')
         if 'false' in claude.lower() and 'legitimate' in claude.lower():
             reasons.append('Claude AI: listing flagged as not legitimate')
             score -= 25
