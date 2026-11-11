@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { useAuthStore } from '../lib/store';
 import {
-  getAdminOverview, getAdminDisputes, getAdminCopyrightReports,
-  resolveAdminDispute, updateAdminCopyrightReport,
+  getAdminOverview, getAdminDisputes, getAdminCopyrightReports, getAdminModerationQueue,
+  resolveAdminDispute, updateAdminCopyrightReport, updateAdminModeration, runAdminMarketplaceScan,
 } from '../lib/api';
 import toast from 'react-hot-toast';
 import { RefreshCw, ShieldCheck, FileWarning, Scale } from 'lucide-react';
@@ -14,18 +14,20 @@ export default function AdminDashboard() {
   const [overview, setOverview] = useState(null);
   const [disputes, setDisputes] = useState([]);
   const [reports, setReports] = useState([]);
+  const [moderation, setModeration] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState('');
 
   const load = async () => {
     setLoading(true);
     try {
-      const [summary, disputeList, reportList] = await Promise.all([
-        getAdminOverview(), getAdminDisputes(), getAdminCopyrightReports(),
+      const [summary, disputeList, reportList, moderationList] = await Promise.all([
+        getAdminOverview(), getAdminDisputes(), getAdminCopyrightReports(), getAdminModerationQueue(),
       ]);
       setOverview(summary.data);
       setDisputes(disputeList.data.disputes || []);
       setReports(reportList.data.reports || []);
+      setModeration(moderationList.data.listings || []);
     } catch (error) {
       toast.error(error.response?.data?.error || 'Could not load admin data');
     } finally {
@@ -45,6 +47,33 @@ export default function AdminDashboard() {
     }
     if (user?.is_admin) load();
   }, [authReady, isAuthenticated, user, router]);
+
+  const runScan = async () => {
+    setBusy('scan');
+    try {
+      const response = await runAdminMarketplaceScan();
+      toast.success(`AI scan finished. ${response.data.removed_fake_listings || 0} listings were flagged.`);
+      await load();
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'AI moderation scan failed');
+    } finally {
+      setBusy('');
+    }
+  };
+
+  const moderateListing = async (gigId, action) => {
+    const note = window.prompt('Admin moderation note (optional):') || '';
+    setBusy('moderation-' + gigId);
+    try {
+      await updateAdminModeration(gigId, { action, note });
+      toast.success(action === 'approve' ? 'Listing approved' : 'Listing removed');
+      await load();
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Could not update listing');
+    } finally {
+      setBusy('');
+    }
+  };
 
   const resolve = async (orderId, decision) => {
     const label = decision === 'refund' ? 'refund the buyer' : 'release payment to the seller';
@@ -106,6 +135,42 @@ export default function AdminDashboard() {
               <p className="text-3xl font-semibold mt-2">{value ?? '—'}</p>
             </div>
           ))}
+        </section>
+
+        <section className="mb-12">
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+            <div className="flex items-center gap-2">
+              <ShieldCheck size={18} />
+              <h2 className="text-xl font-semibold">AI moderation queue</h2>
+              <span className="text-xs text-white/40">{moderation.length} flagged or reviewed listings</span>
+            </div>
+            <button type="button" onClick={runScan} disabled={busy === 'scan'} className="rounded-lg border border-white/20 px-4 py-2 text-sm hover:bg-white/5 disabled:opacity-40">
+              {busy === 'scan' ? 'Scanning…' : 'Run AI marketplace scan'}
+            </button>
+          </div>
+          {moderation.length === 0 ? (
+            <div className="rounded-xl border border-white/10 bg-card p-6 text-sm text-white/45">No listings are waiting for moderation.</div>
+          ) : (
+            <div className="space-y-3">
+              {moderation.map((listing) => (
+                <article key={listing.id} className="rounded-xl border border-white/10 bg-card p-5">
+                  <div className="flex flex-wrap justify-between gap-3">
+                    <div>
+                      <h3 className="font-semibold">#{listing.id} · {listing.title}</h3>
+                      <p className="text-xs text-white/45 mt-1">{listing.category} · Seller: {listing.seller} · Score: {listing.ai_quality_score ?? 'not scored'}</p>
+                    </div>
+                    <span className="text-xs text-white/45">{listing.is_active ? 'Active' : 'Hidden'} · {listing.flagged_fake ? 'Flagged' : 'Needs review'}</span>
+                  </div>
+                  <p className="text-sm text-white/70 mt-3">{listing.description}</p>
+                  {listing.ai_scan_notes && <pre className="whitespace-pre-wrap text-xs text-white/40 mt-3">{listing.ai_scan_notes}</pre>}
+                  <div className="flex flex-wrap gap-2 mt-4">
+                    <button type="button" disabled={busy === 'moderation-' + listing.id} onClick={() => moderateListing(listing.id, 'approve')} className="rounded-lg border border-white/20 px-4 py-2 text-sm hover:bg-white/5 disabled:opacity-40">Approve listing</button>
+                    <button type="button" disabled={busy === 'moderation-' + listing.id} onClick={() => moderateListing(listing.id, 'remove')} className="rounded-lg border border-white/20 px-4 py-2 text-sm hover:bg-white/5 disabled:opacity-40">Remove listing</button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
         </section>
 
         <section className="mb-12">
