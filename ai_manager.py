@@ -9,13 +9,57 @@ import anthropic
 import openai
 from PIL import Image
 import io
+from types import SimpleNamespace
+
+class _NvidiaMessageAdapter:
+    """Small Anthropic-shaped adapter so existing AI features can use NVIDIA NIM."""
+    def __init__(self, client, model):
+        self.client = client
+        self.model = model
+
+    def create(self, model=None, max_tokens=1024, messages=None, **kwargs):
+        completion = self.client.chat.completions.create(
+            model=self.model,
+            messages=messages or [],
+            max_tokens=max_tokens,
+            temperature=kwargs.get("temperature", 0.2),
+            stream=False,
+        )
+        content = completion.choices[0].message.content or ""
+        content = content.strip()
+        if content.startswith("```"):
+            content = content.split("```", 2)[1]
+            if content.lstrip().startswith("json"):
+                content = content.lstrip()[4:].strip()
+        return SimpleNamespace(content=[SimpleNamespace(text=content)])
+
+
+class _NvidiaClientAdapter:
+    def __init__(self, client, model):
+        self.messages = _NvidiaMessageAdapter(client, model)
+
 
 class AIManager:
     def __init__(self):
-        # Keep the marketplace bootable when optional AI credentials are not configured.
-        api_key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
-        self.anthropic_client = anthropic.Anthropic(api_key=api_key) if api_key else None
+        # Prefer the configured Claude provider; otherwise use the requested NVIDIA NIM API.
+        anthropic_key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
+        nvidia_key = os.environ.get("NVIDIA_API_KEY", "").strip()
+        nvidia_model = os.environ.get("NVIDIA_MODEL", "nvidia/nemotron-3.5-lightning-30b-a3b").strip()
+        self.provider = "anthropic" if anthropic_key else ("nvidia" if nvidia_key else "fallback")
+        if anthropic_key:
+            self.anthropic_client = anthropic.Anthropic(api_key=anthropic_key)
+        elif nvidia_key:
+            nvidia_client = openai.OpenAI(
+                base_url="https://integrate.api.nvidia.com/v1",
+                api_key=nvidia_key,
+            )
+            self.anthropic_client = _NvidiaClientAdapter(nvidia_client, nvidia_model)
+        else:
+            self.anthropic_client = None
         openai.api_key = os.environ.get("OPENAI_API_KEY", "")
+
+    def status(self):
+        return {"configured": self.anthropic_client is not None, "provider": self.provider}
         
     # ==================== CONTENT MODERATION ====================
     
