@@ -29,7 +29,7 @@ export default function SelectRole() {
         role: selectedRole
       });
 
-      updateUser({ account_type: selectedRole });
+      updateUser({ account_type: selectedRole, is_seller: selectedRole === 'seller' });
       toast.success(`Welcome as a ${selectedRole}!`);
       
       if (selectedRole === 'seller') {
