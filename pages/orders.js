@@ -3,7 +3,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import OrderChat from '../components/OrderChat';
 import { useAuthStore } from '../lib/store';
-import { getMyOrders, completeOrder, deliverOrder, disputeEscrow, requestAiVerify, confirmStripeCheckout, requestOrderCancellation } from '../lib/api';
+import { getMyOrders, completeOrder, deliverOrder, disputeEscrow, requestAiVerify, confirmStripeCheckout, requestOrderCancellation, respondToDispute } from '../lib/api';
 import toast from 'react-hot-toast';
 import { Shield, CheckCircle, AlertTriangle, Bot, Download } from 'lucide-react';
 
@@ -73,6 +73,18 @@ export default function Orders() {
       load();
     } catch (e) {
       toast.error(e.response?.data?.error || 'Failed');
+    }
+  };
+
+  const handleDisputeResponse = async (id) => {
+    const response = window.prompt('Explain your response to the buyer\'s dispute:');
+    if (!response) return;
+    try {
+      await respondToDispute(id, { response });
+      toast.success('Your dispute response was submitted');
+      load();
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Could not submit dispute response');
     }
   };
 
@@ -147,6 +159,15 @@ export default function Orders() {
                   </div>
                   <span className="text-display text-2xl">₹{o.amount}</span>
                 </div>
+
+                {tab === 'seller' && o.status === 'disputed' && (
+                  <div className="mt-4">
+                    <button type="button" onClick={() => handleDisputeResponse(o.id)} className="rounded-lg border border-white/20 px-4 py-2 text-sm hover:bg-white/5">
+                      Submit dispute response
+                    </button>
+                    {o.seller_message && <p className="mt-2 text-xs text-white/45">Your response: {o.seller_message}</p>}
+                  </div>
+                )}
 
                 {o.delivery_file && (
                   <a
