@@ -33,10 +33,12 @@ def register_stripe_routes(app, db, User, Order, Gig):
         order = Order.query.get(int(order_id))
         if not order:
             return False
-        if order.payment_id == session.get("id"):
+        if order.payment_id == session.get("id") and order.status == "in_progress":
             return True
         if order.status != "pending":
-            return order.payment_method == "stripe" and order.payment_id == session.get("id")
+            return False
+        if order.payment_id and order.payment_id != session.get("id"):
+            return False
         order.payment_id = session.get("id")
         order.payment_method = "stripe"
         order.status = "in_progress"
@@ -60,8 +62,24 @@ def register_stripe_routes(app, db, User, Order, Gig):
         user_id = get_jwt_identity()
         if order.buyer_id != user_id:
             return jsonify({"error": "You are not allowed to pay for this order"}), 403
-        if order.status != "pending" or order.payment_id:
+        if order.status != "pending":
             return jsonify({"error": "This order is not awaiting payment"}), 409
+        if order.payment_id:
+            if order.payment_method != "stripe":
+                return jsonify({"error": "This order already has a different payment method"}), 409
+            try:
+                existing = stripe.checkout.Session.retrieve(order.payment_id)
+                if existing.get("status") == "open":
+                    return jsonify({"checkout_url": existing.url, "session_id": existing.id})
+                if existing.get("payment_status") == "paid":
+                    return jsonify({"error": "Payment is complete and awaiting confirmation"}), 409
+                if existing.get("status") != "expired":
+                    return jsonify({"error": "The previous checkout is still processing"}), 409
+                order.payment_id = None
+                order.payment_method = None
+                db.session.commit()
+            except stripe.error.StripeError as exc:
+                return jsonify({"error": str(exc.user_message or exc)}), 400
         if order.amount <= 0:
             return jsonify({"error": "Invalid order amount"}), 400
         gig = Gig.query.get(order.gig_id)
@@ -84,6 +102,9 @@ def register_stripe_routes(app, db, User, Order, Gig):
                 success_url=f"{FRONTEND_URL}/orders?payment=success&session_id={{CHECKOUT_SESSION_ID}}",
                 cancel_url=f"{FRONTEND_URL}/gig/{order.gig_id}?payment=cancelled",
             )
+            order.payment_id = session.id
+            order.payment_method = "stripe"
+            db.session.commit()
             return jsonify({"checkout_url": session.url, "session_id": session.id})
         except stripe.error.StripeError as exc:
             return jsonify({"error": str(exc.user_message or exc)}), 400
