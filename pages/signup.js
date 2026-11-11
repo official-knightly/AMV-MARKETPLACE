@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
-import { googleAuth, register, requestPhoneOtp, verifyPhoneOtp } from '../lib/api';
+import { googleAuth, register } from '../lib/api';
 import { useAuthStore } from '../lib/store';
 import GoogleAuthButton from '../components/GoogleAuthButton';
 import toast from 'react-hot-toast';
@@ -11,24 +11,14 @@ export default function Signup() {
     email: '',
     username: '',
     full_name: '',
-    phone_number: '',
     password: '',
     confirmPassword: '',
   });
   const [loading, setLoading] = useState(false);
-  const [otpCode, setOtpCode] = useState('');
-  const [otpSending, setOtpSending] = useState(false);
-  const [otpVerifying, setOtpVerifying] = useState(false);
-  const [otpSent, setOtpSent] = useState(false);
-  const [phoneVerified, setPhoneVerified] = useState(false);
   const router = useRouter();
   const { setAuth } = useAuthStore();
 
   const handleChange = (e) => {
-    if (e.target.name === 'phone_number') {
-      setPhoneVerified(false);
-      setOtpSent(false);
-    }
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
@@ -45,11 +35,6 @@ export default function Signup() {
       return;
     }
 
-    if (!phoneVerified) {
-      toast.error('Verify your phone number with OTP first');
-      return;
-    }
-
     setLoading(true);
 
     try {
@@ -57,8 +42,6 @@ export default function Signup() {
         email: formData.email,
         username: formData.username,
         full_name: formData.full_name,
-        phone_number: formData.phone_number,
-        otp_code: otpCode,
         password: formData.password,
       });
       setAuth(res.data.user, res.data.token);
@@ -68,46 +51,6 @@ export default function Signup() {
       toast.error(error.response?.data?.error || 'Signup failed');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleRequestOtp = async () => {
-    if (!formData.phone_number) {
-      toast.error('Enter phone number first');
-      return;
-    }
-    setOtpSending(true);
-    try {
-      const res = await requestPhoneOtp(formData.phone_number);
-      setOtpSent(true);
-      setPhoneVerified(false);
-      if (res.data.otp_code) {
-        setOtpCode(res.data.otp_code);
-        toast.success(`OTP generated: ${res.data.otp_code}`);
-      } else {
-        toast.success('OTP sent');
-      }
-    } catch (error) {
-      toast.error(error.response?.data?.error || 'Failed to send OTP');
-    } finally {
-      setOtpSending(false);
-    }
-  };
-
-  const handleVerifyOtp = async () => {
-    if (!formData.phone_number || !otpCode) {
-      toast.error('Enter phone number and OTP');
-      return;
-    }
-    setOtpVerifying(true);
-    try {
-      await verifyPhoneOtp(formData.phone_number, otpCode);
-      setPhoneVerified(true);
-      toast.success('Phone number verified');
-    } catch (error) {
-      toast.error(error.response?.data?.error || 'OTP verification failed');
-    } finally {
-      setOtpVerifying(false);
     }
   };
 
@@ -171,49 +114,6 @@ export default function Signup() {
                 className="w-full px-4 py-3 rounded-lg bg-surface border border-white/10 focus:border-white/30 outline-none transition"
                 required
               />
-            </div>
-
-            <div>
-              <label className="block text-sm text-white/60 mb-2">Phone Number</label>
-              <div className="flex gap-2">
-                <input
-                  type="tel"
-                  name="phone_number"
-                  value={formData.phone_number}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 rounded-lg bg-surface border border-white/10 focus:border-white/30 outline-none transition"
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={handleRequestOtp}
-                  disabled={otpSending}
-                  className="px-4 py-3 rounded-lg border border-white/20 text-sm whitespace-nowrap"
-                >
-                  {otpSending ? 'Sending...' : 'Send OTP'}
-                </button>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm text-white/60 mb-2">OTP</label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={otpCode}
-                  onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                  className="w-full px-4 py-3 rounded-lg bg-surface border border-white/10 focus:border-white/30 outline-none transition"
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={handleVerifyOtp}
-                  disabled={!otpSent || otpVerifying}
-                  className={`px-4 py-3 rounded-lg text-sm whitespace-nowrap ${phoneVerified ? 'bg-green-600 text-white' : 'border border-white/20'}`}
-                >
-                  {phoneVerified ? 'Verified' : otpVerifying ? 'Verifying...' : 'Verify'}
-                </button>
-              </div>
             </div>
 
             <div>
