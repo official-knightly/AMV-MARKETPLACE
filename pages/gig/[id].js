@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
-import Navbar from '../../components/Navbar';
 import { getGig, createOrder, createStripeCheckoutSession } from '../../lib/api';
 import { useAuthStore } from '../../lib/store';
 import toast from 'react-hot-toast';
@@ -43,10 +42,7 @@ export default function GigDetail() {
 
   if (!gig) {
     return (
-      <>
-        <Navbar />
-        <div className="pt-32 text-center text-white/50">Loading...</div>
-      </>
+      <div className="pt-32 text-center text-white/50">Loading...</div>
     );
   }
 
@@ -55,8 +51,6 @@ export default function GigDetail() {
       <Head>
         <title>{gig.title} - VORTEX</title>
       </Head>
-      <Navbar />
-
       <main className="pt-24 pb-16 px-6">
         <div className="max-w-6xl mx-auto grid lg:grid-cols-3 gap-10">
           <div className="lg:col-span-2">
