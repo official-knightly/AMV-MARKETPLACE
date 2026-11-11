@@ -3,7 +3,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import Navbar from '../components/Navbar';
 import { useAuthStore } from '../lib/store';
-import { getMyOrders, completeOrder, deliverOrder, disputeEscrow, requestAiVerify } from '../lib/api';
+import { getMyOrders, completeOrder, deliverOrder, disputeEscrow, requestAiVerify, confirmStripeCheckout } from '../lib/api';
 import toast from 'react-hot-toast';
 import { Shield, CheckCircle, AlertTriangle, Bot, Download } from 'lucide-react';
 
@@ -14,6 +14,7 @@ export default function Orders() {
   const [orders, setOrders] = useState([]);
   const [deliveryUrl, setDeliveryUrl] = useState({});
   const [aiLoading, setAiLoading] = useState(null);
+  const [stripeSessionHandled, setStripeSessionHandled] = useState(false);
 
   const load = () => {
     getMyOrders(tab).then((res) => setOrders(res.data.orders)).catch(console.error);
@@ -24,8 +25,16 @@ export default function Orders() {
       router.push('/login');
       return;
     }
-    load();
-  }, [isAuthenticated, tab, router]);
+    if (router.query.session_id && !stripeSessionHandled) {
+      setStripeSessionHandled(true);
+      confirmStripeCheckout(String(router.query.session_id))
+        .then((res) => toast.success(res.data.message || 'Stripe payment confirmed'))
+        .catch((error) => toast.error(error.response?.data?.error || 'Payment confirmation is still pending'))
+        .finally(load);
+    } else {
+      load();
+    }
+  }, [isAuthenticated, tab, router, router.query.session_id, stripeSessionHandled]);
 
   const handleConfirmReceived = async (id) => {
     if (!confirm('Confirm you received the AMV? Escrow will release to the seller.')) return;
