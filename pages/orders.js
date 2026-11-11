@@ -38,7 +38,7 @@ export default function Orders() {
   }, [authReady, isAuthenticated, tab, router, router.query.session_id, stripeSessionHandled]);
 
   const handleConfirmReceived = async (id) => {
-    if (!confirm('Confirm you received the AMV? Escrow will release to the seller.')) return;
+    if (!confirm('Confirm you received the AMV? Payment will be released to the seller.')) return;
     try {
       const res = await completeOrder(id);
       toast.success(res.data.message || 'Payment released');
@@ -145,7 +145,7 @@ export default function Orders() {
                   <div>
                     <h3 className="font-semibold">{o.gig_title}</h3>
                     <p className="text-sm text-white/50">
-                      {o.status} · <Shield className="w-3 h-3 inline text-green-400" /> escrow: {o.escrow_status}
+                      {o.status} · <Shield className="w-3 h-3 inline text-green-400" /> payment hold: {o.escrow_status}
                     </p>
                     {o.delivered_at && (
                       <p className="text-xs text-white/40 mt-1">Delivered {new Date(o.delivered_at).toLocaleString()}</p>
