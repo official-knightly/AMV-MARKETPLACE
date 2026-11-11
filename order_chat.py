@@ -130,7 +130,7 @@ def register_order_chat_routes(app, db, User, Order, Message):
     @app.route("/api/orders/<int:order_id>/cancel", methods=["POST"])
     @jwt_required()
     def request_order_cancellation(order_id):
-        uid = get_jwt_identity()
+        uid = int(get_jwt_identity())
         order = Order.query.get_or_404(order_id)
         if not participant(order, uid):
             return jsonify({"error": "You are not part of this order"}), 403
