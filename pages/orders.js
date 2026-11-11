@@ -9,7 +9,7 @@ import { Shield, CheckCircle, AlertTriangle, Bot, Download } from 'lucide-react'
 
 export default function Orders() {
   const router = useRouter();
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, authReady } = useAuthStore();
   const [tab, setTab] = useState('buyer');
   const [orders, setOrders] = useState([]);
   const [deliveryUrl, setDeliveryUrl] = useState({});
@@ -21,6 +21,7 @@ export default function Orders() {
   };
 
   useEffect(() => {
+    if (!authReady) return;
     if (!isAuthenticated) {
       router.push('/login');
       return;
@@ -34,7 +35,7 @@ export default function Orders() {
     } else {
       load();
     }
-  }, [isAuthenticated, tab, router, router.query.session_id, stripeSessionHandled]);
+  }, [authReady, isAuthenticated, tab, router, router.query.session_id, stripeSessionHandled]);
 
   const handleConfirmReceived = async (id) => {
     if (!confirm('Confirm you received the AMV? Escrow will release to the seller.')) return;
